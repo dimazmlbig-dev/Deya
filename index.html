@@ -1,241 +1,925 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🚗 Artemka Driver</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🚗 Artemka Driver</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #000; /* Черный фон, чтобы картинки смотрелись лучше */
-            height: 100vh;
-            overflow: hidden;
-            color: white;
-        }
+  <style>
+    :root{
+      --bg:#000;
+      --panel: rgba(255,255,255,.10);
+      --panel2: rgba(255,255,255,.14);
+      --text:#fff;
+      --muted:#a8a8a8;
+      --gold:#FFD700;
+      --danger:#ff4d4d;
+      --radius:22px;
 
-        /* Экран загрузки */
-        #loading-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000 url('load.png') no-repeat center;
-            background-size: cover;
-            z-index: 100;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            padding-bottom: 50px;
-        }
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+    }
 
-        .game-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 20px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.8) 100%);
-        }
+    *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { height:100%; }
+    body{
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow:hidden;
+      overscroll-behavior:none;
+      -webkit-user-select:none;
+      user-select:none;
+    }
 
-        .header h1 {
-            text-align: center;
-            font-size: 24px;
-            color: #FFD700;
-            margin-bottom: 5px;
-        }
+    /* Loading */
+    #loading-screen{
+      position:fixed;
+      inset:0;
+      background: #000 url("load.png") no-repeat center;
+      background-size: cover;
+      z-index: 999;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding: 0 16px calc(24px + var(--safeBottom)) 16px;
+    }
+    #loading-box{
+      width:100%;
+      max-width: 520px;
+      background: rgba(0,0,0,.45);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 14px 14px 12px;
+      backdrop-filter: blur(10px);
+    }
+    #loading-title{
+      font-size: 14px;
+      color: rgba(255,255,255,.9);
+      margin-bottom: 10px;
+    }
+    .bar{
+      width:100%;
+      height:10px;
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width: 10%;
+      background: var(--gold);
+      border-radius: 999px;
+      transition: width .25s ease;
+    }
+    #loading-sub{
+      margin-top: 10px;
+      display:flex;
+      justify-content:space-between;
+      font-size: 12px;
+      color: rgba(255,255,255,.75);
+    }
 
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 20px;
-            margin: 10px 0;
-        }
+    /* Layout */
+    .game-container{
+      height: 100vh;
+      padding: calc(14px + var(--safeTop)) 16px calc(14px + var(--safeBottom)) 16px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.85) 100%);
+    }
 
-        .stat-value {
-            display: block;
-            font-size: 20px;
-            font-weight: bold;
-            color: #fff;
-        }
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .title{
+      font-weight: 900;
+      letter-spacing: .6px;
+      color: var(--gold);
+      font-size: 20px;
+    }
+    .pill{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.10);
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+    }
+    .pill b{ color:#fff; font-size: 12px; }
 
-        /* Главная зона тапа */
-        .game-area {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+    .stats{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
 
-        #tap-image {
-            width: 80%; /* Размер картинки для тапа */
-            max-width: 300px;
-            cursor: pointer;
-            transition: transform 0.05s alternate;
-            user-select: none;
-            -webkit-user-drag: none;
-        }
+    .card{
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding: 14px 14px 12px;
+      backdrop-filter: blur(10px);
+    }
+    .card .label{
+      font-size: 11px;
+      color: rgba(255,255,255,.7);
+      letter-spacing: .5px;
+    }
+    .card .value{
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 900;
+      color:#fff;
+    }
+    .card .hint{
+      margin-top: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,.65);
+    }
 
-        #tap-image:active {
-            transform: scale(0.95);
-        }
+    .energy-row{
+      margin-top: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .energy-row .e-text{
+      font-size: 12px;
+      color: rgba(255,255,255,.8);
+      white-space:nowrap;
+    }
+    .energy-bar{
+      flex:1;
+      height: 10px;
+      background: rgba(255,255,255,.10);
+      border-radius: 999px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .energy-bar > i{
+      display:block;
+      height:100%;
+      width: 0%;
+      background: var(--gold);
+      border-radius: 999px;
+      transition: width .15s ease;
+    }
 
-        /* Всплывающие цифры +1 */
-        .floating-text {
-            position: absolute;
-            color: #FFD700;
-            font-size: 32px;
-            font-weight: bold;
-            pointer-events: none;
-            animation: floatUp 0.6s ease-out forwards;
-        }
+    /* Tap zone */
+    .game-area{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+    }
 
-        @keyframes floatUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-100px); opacity: 0; }
-        }
+    #tap-image{
+      width:min(78vw, 320px);
+      cursor:pointer;
+      transition: transform 0.06s ease;
+      -webkit-user-drag:none;
+      user-drag:none;
+      user-select:none;
+      filter: drop-shadow(0 16px 30px rgba(0,0,0,.55));
+    }
+    .tap-press{ transform: scale(0.95); }
 
-        .controls {
-            padding: 20px 0;
-        }
+    .shake{
+      animation: shake .25s ease;
+    }
+    @keyframes shake{
+      0%{ transform: translateX(0); }
+      25%{ transform: translateX(-6px); }
+      50%{ transform: translateX(6px); }
+      75%{ transform: translateX(-4px); }
+      100%{ transform: translateX(0); }
+    }
 
-        .upgrade-btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 15px;
-            border: none;
-            background: #FFD700;
-            color: #000;
-            font-weight: bold;
-            font-size: 18px;
-        }
+    /* Floating text */
+    .floating-text{
+      position:absolute;
+      left:0; top:0;
+      color: var(--gold);
+      font-size: 30px;
+      font-weight: 900;
+      pointer-events:none;
+      text-shadow: 0 10px 20px rgba(0,0,0,.6);
+      animation: floatUp .65s ease-out forwards;
+      will-change: transform, opacity;
+    }
+    @keyframes floatUp{
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-110px) scale(1.06); opacity: 0; }
+    }
 
-        .upgrade-btn:disabled {
-            background: #555;
-            color: #888;
-        }
-    </style>
+    /* Controls */
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button{
+      appearance:none;
+      border:none;
+      border-radius: 16px;
+      padding: 14px 14px;
+      font-weight: 900;
+      font-size: 15px;
+      cursor:pointer;
+      transition: transform .06s ease, opacity .2s ease;
+    }
+    button:active{ transform: scale(0.98); }
+
+    .btn-primary{
+      background: var(--gold);
+      color:#000;
+    }
+    .btn-secondary{
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.12);
+      color:#fff;
+    }
+    button:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    /* Modal */
+    .modal{
+      position: fixed;
+      inset:0;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      z-index: 50;
+      background: rgba(0,0,0,.55);
+      padding: 16px 16px calc(16px + var(--safeBottom)) 16px;
+    }
+    .modal.open{ display:flex; }
+    .sheet{
+      width:100%;
+      max-width: 560px;
+      border-radius: 24px;
+      background: rgba(18,18,18,.92);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 30px 90px rgba(0,0,0,.7);
+      overflow:hidden;
+    }
+    .sheet-header{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .sheet-header b{ color: #fff; font-size: 15px; }
+    .sheet-header .x{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.85);
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-weight: 900;
+      font-size: 14px;
+    }
+    .sheet-body{
+      padding: 14px 16px 16px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .shop-item{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .shop-item .left{
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+    }
+    .shop-item .name{
+      font-weight: 900;
+      font-size: 14px;
+      color:#fff;
+    }
+    .shop-item .desc{
+      font-size: 12px;
+      color: rgba(255,255,255,.70);
+      line-height: 1.25;
+    }
+    .shop-item .right{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap: 8px;
+      min-width: 140px;
+    }
+    .cost{
+      font-size: 12px;
+      color: rgba(255,255,255,.8);
+      white-space:nowrap;
+    }
+    .btn-buy{
+      width: 100%;
+      background: var(--gold);
+      color:#000;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .tiny{
+      font-size: 11px;
+      color: rgba(255,255,255,.65);
+      text-align:center;
+      margin-top: 6px;
+    }
+  </style>
 </head>
+
 <body>
+  <div id="loading-screen">
+    <div id="loading-box">
+      <div id="loading-title">Загрузка гаража…</div>
+      <div class="bar"><i id="loadingBar"></i></div>
+      <div id="loading-sub">
+        <span id="loadingLeft">Assets…</span>
+        <span id="loadingRight">0%</span>
+      </div>
+    </div>
+  </div>
 
-    <div id="loading-screen">
-        <p>Загрузка гаража...</p>
+  <div class="game-container">
+    <div class="header">
+      <div class="title">ARTEMKA DRIVER</div>
+      <div class="pill">
+        <span>Сейв:</span>
+        <b id="saveMode">local</b>
+      </div>
     </div>
 
-    <div class="game-container">
-        <div class="header">
-            <h1>ARTEMKA DRIVER</h1>
-        </div>
+    <div class="stats">
+      <div class="card">
+        <div class="label">АРТЕМКИ</div>
+        <div class="value" id="coins">0</div>
+        <div class="hint">Тапай, покупай апгрейды</div>
+      </div>
 
-        <div class="stats">
-            <div style="text-align: center;">
-                <span style="font-size: 12px; color: #aaa;">АРТЕМКИ</span>
-                <span class="stat-value" id="coins">0</span>
-            </div>
-            <div style="text-align: center;">
-                <span style="font-size: 12px; color: #aaa;">УРОВЕНЬ</span>
-                <span class="stat-value" id="level">1</span>
-            </div>
-        </div>
-
-        <div class="game-area" id="gameArea">
-            <img src="tap.png" id="tap-image" alt="TAP">
-        </div>
-
-        <div class="controls">
-            <button class="upgrade-btn" id="upgradeBtn">Улучшить (10 🚗)</button>
-        </div>
+      <div class="card">
+        <div class="label">МОЩНОСТЬ</div>
+        <div class="value" id="power">1</div>
+        <div class="hint">Сколько даёт один тап</div>
+      </div>
     </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    <div class="card">
+      <div class="label">ЭНЕРГИЯ</div>
+      <div class="energy-row">
+        <div class="e-text"><b id="energyText">0/0</b></div>
+        <div class="energy-bar"><i id="energyFill"></i></div>
+        <div class="e-text" id="regenText">+1 / 2с</div>
+      </div>
+      <div class="hint" style="margin-top:10px">
+        Тап = −1 энергия. Энергия восстанавливается даже если игра закрыта.
+      </div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+      <img src="tap.png" id="tap-image" alt="TAP" draggable="false" />
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="upgradeBtn">Улучшить (+1 за тап)</button>
+      <button class="btn-secondary" id="garageBtn">Гараж / Апгрейды</button>
+    </div>
+
+    <div class="tiny" id="uidText"></div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-header">
+        <b>Гараж</b>
+        <button class="x" id="closeModal">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="shop-item">
+          <div class="left">
+            <div class="name">🔋 Бак энергии</div>
+            <div class="desc">Увеличивает максимальную энергию на +10</div>
+          </div>
+          <div class="right">
+            <div class="cost" id="batteryCost">—</div>
+            <button class="btn-buy" id="buyBattery">Купить</button>
+          </div>
+        </div>
+
+        <div class="shop-item">
+          <div class="left">
+            <div class="name">⚡ Турбозаряд</div>
+            <div class="desc">Ускоряет реген энергии (меньше секунд за 1 энергию)</div>
+          </div>
+          <div class="right">
+            <div class="cost" id="regenCost">—</div>
+            <button class="btn-buy" id="buyRegen">Купить</button>
+          </div>
+        </div>
+
+        <div class="shop-item">
+          <div class="left">
+            <div class="name">🧹 Сброс прогресса</div>
+            <div class="desc">Обнуляет деньги и апгрейды (аккуратно)</div>
+          </div>
+          <div class="right">
+            <div class="cost" style="color: rgba(255,255,255,.7)">без возврата</div>
+            <button class="btn-buy" id="resetBtn" style="background: var(--danger); color:#fff;">Сбросить</button>
+          </div>
+        </div>
+
+        <div class="tiny" id="syncHint">Сохранение: …</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Telegram ---
+    const tg = window.Telegram?.WebApp;
+    const inTelegram = !!tg;
+
+    if (inTelegram) {
+      tg.expand();
+      tg.ready();
+      try {
         tg.enableClosingConfirmation();
+      } catch (_) {}
+      try {
+        tg.setHeaderColor?.("#000000");
+        tg.setBackgroundColor?.("#000000");
+      } catch (_) {}
+    }
 
-        let coins = parseInt(localStorage.getItem('coins')) || 0;
-        let level = parseInt(localStorage.getItem('level')) || 1;
-        let power = level;
+    // --- Elements ---
+    const loadingScreen = document.getElementById("loading-screen");
+    const loadingBar = document.getElementById("loadingBar");
+    const loadingRight = document.getElementById("loadingRight");
+    const saveModeEl = document.getElementById("saveMode");
 
-        const coinsEl = document.getElementById('coins');
-        const levelEl = document.getElementById('level');
-        const upgradeBtn = document.getElementById('upgradeBtn');
-        const tapImg = document.getElementById('tap-image');
-        const gameArea = document.getElementById('gameArea');
+    const coinsEl = document.getElementById("coins");
+    const powerEl = document.getElementById("power");
+    const energyTextEl = document.getElementById("energyText");
+    const energyFillEl = document.getElementById("energyFill");
+    const regenTextEl = document.getElementById("regenText");
 
-        // Убираем экран загрузки через 2 секунды
-        window.onload = () => {
-            setTimeout(() => {
-                document.getElementById('loading-screen').style.display = 'none';
-            }, 2000);
-            updateUI();
-        };
+    const upgradeBtn = document.getElementById("upgradeBtn");
+    const garageBtn = document.getElementById("garageBtn");
+    const tapImg = document.getElementById("tap-image");
+    const gameArea = document.getElementById("gameArea");
 
-        function updateUI() {
-            coinsEl.textContent = Math.floor(coins).toLocaleString();
-            levelEl.textContent = level;
-            let cost = Math.round(10 * Math.pow(1.5, level - 1));
-            upgradeBtn.textContent = `Улучшить (+1 за тап) — ${cost} 🚗`;
-            upgradeBtn.disabled = coins < cost;
-        }
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("closeModal");
+    const batteryCostEl = document.getElementById("batteryCost");
+    const regenCostEl = document.getElementById("regenCost");
+    const buyBatteryBtn = document.getElementById("buyBattery");
+    const buyRegenBtn = document.getElementById("buyRegen");
+    const resetBtn = document.getElementById("resetBtn");
+    const uidText = document.getElementById("uidText");
+    const syncHint = document.getElementById("syncHint");
 
-        function handleTap(e) {
-            coins += power;
-            
-            // Создаем эффект +1
-            const x = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-            const y = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-            
-            createFloatingText(x, y, `+${power}`);
-            
-            // Вибрация (только для мобильных в ТГ)
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
-            }
+    // --- User-scoped keys ---
+    const uid = (inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id)
+      ? String(tg.initDataUnsafe.user.id)
+      : "guest";
 
-            save();
-            updateUI();
-        }
+    uidText.textContent = inTelegram ? `ID: ${uid}` : `Режим браузера (без Telegram)`;
 
-        function createFloatingText(x, y, text) {
-            const el = document.createElement('div');
-            el.className = 'floating-text';
-            el.style.left = `${x - 20}px`;
-            el.style.top = `${y - 40}px`;
-            el.textContent = text;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 600);
-        }
+    const KEY_PREFIX = `artemka_driver_${uid}_v2_`;
+    const K = {
+      coins: KEY_PREFIX + "coins",
+      power: KEY_PREFIX + "power",
+      energy: KEY_PREFIX + "energy",
+      energyCap: KEY_PREFIX + "energyCap",
+      regenMs: KEY_PREFIX + "regenMs",
+      batteryLvl: KEY_PREFIX + "batteryLvl",
+      regenLvl: KEY_PREFIX + "regenLvl",
+      lastTs: KEY_PREFIX + "lastEnergyTs",
+    };
 
-        upgradeBtn.onclick = () => {
-            let cost = Math.round(10 * Math.pow(1.5, level - 1));
-            if (coins >= cost) {
-                coins -= cost;
-                level++;
-                power = level;
-                save();
-                updateUI();
-            }
-        };
+    // --- State (defaults) ---
+    let state = {
+      coins: 0,
+      power: 1,
+      energy: 50,
+      energyCap: 50,
+      regenMs: 2000,      // +1 energy per 2 sec
+      batteryLvl: 0,
+      regenLvl: 0,
+      lastEnergyTs: Date.now(),
+    };
 
-        function save() {
-            localStorage.setItem('coins', coins);
-            localStorage.setItem('level', level);
-        }
+    // --- Helpers ---
+    const fmt = (n) => Math.floor(n).toLocaleString("ru-RU");
 
-        // Слушатели для тапа (мышка и тач)
-        tapImg.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleTap(e);
+    function haptic(type = "medium") {
+      if (!inTelegram || !tg.HapticFeedback) return;
+      try {
+        tg.HapticFeedback.impactOccurred(type);
+      } catch (_) {}
+    }
+
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+    function computePowerUpgradeCost() {
+      // старое поведение: 10 * 1.5^(power-1)
+      return Math.round(10 * Math.pow(1.5, state.power - 1));
+    }
+    function computeBatteryCost() {
+      // 60 * 1.6^lvl
+      return Math.round(60 * Math.pow(1.6, state.batteryLvl));
+    }
+    function computeRegenCost() {
+      // 90 * 1.7^lvl
+      return Math.round(90 * Math.pow(1.7, state.regenLvl));
+    }
+
+    function applyOfflineRegen(now = Date.now()) {
+      const last = state.lastEnergyTs || now;
+      if (now <= last) {
+        state.lastEnergyTs = now;
+        return;
+      }
+      const delta = now - last;
+      const gained = Math.floor(delta / state.regenMs);
+      if (gained > 0) {
+        state.energy = clamp(state.energy + gained, 0, state.energyCap);
+        state.lastEnergyTs = last + gained * state.regenMs;
+      }
+    }
+
+    function updateUI() {
+      coinsEl.textContent = fmt(state.coins);
+      powerEl.textContent = String(state.power);
+
+      // Energy
+      energyTextEl.textContent = `${state.energy}/${state.energyCap}`;
+      const pct = state.energyCap > 0 ? (state.energy / state.energyCap) * 100 : 0;
+      energyFillEl.style.width = `${clamp(pct, 0, 100)}%`;
+      regenTextEl.textContent = `+1 / ${(state.regenMs / 1000).toFixed(1)}с`;
+
+      // Buttons
+      const pCost = computePowerUpgradeCost();
+      upgradeBtn.textContent = `Улучшить (+1 за тап) — ${fmt(pCost)} 🚗`;
+      upgradeBtn.disabled = state.coins < pCost;
+
+      const bCost = computeBatteryCost();
+      batteryCostEl.textContent = `${fmt(bCost)} 🚗 (ур. ${state.batteryLvl})`;
+      buyBatteryBtn.disabled = state.coins < bCost;
+
+      const rCost = computeRegenCost();
+      regenCostEl.textContent = `${fmt(rCost)} 🚗 (ур. ${state.regenLvl})`;
+      buyRegenBtn.disabled = state.coins < rCost;
+    }
+
+    function createFloatingText(x, y, text) {
+      const rect = gameArea.getBoundingClientRect();
+      const el = document.createElement("div");
+      el.className = "floating-text";
+      el.style.left = `${x - rect.left - 10}px`;
+      el.style.top  = `${y - rect.top - 30}px`;
+      el.textContent = text;
+      gameArea.appendChild(el);
+      setTimeout(() => el.remove(), 650);
+    }
+
+    // --- Storage: CloudStorage (Telegram) or localStorage ---
+    function cloudAvailable() {
+      return inTelegram && tg.CloudStorage && typeof tg.CloudStorage.getItem === "function";
+    }
+
+    function cloudGet(key) {
+      return new Promise((resolve) => {
+        tg.CloudStorage.getItem(key, (err, val) => {
+          if (err) return resolve(null);
+          resolve(val ?? null);
         });
-        tapImg.addEventListener('click', handleTap);
+      });
+    }
+    function cloudSet(key, value) {
+      return new Promise((resolve) => {
+        tg.CloudStorage.setItem(key, value, (err) => resolve(!err));
+      });
+    }
 
-    </script>
+    async function loadState() {
+      let usedCloud = false;
+
+      if (cloudAvailable()) {
+        usedCloud = true;
+        saveModeEl.textContent = "cloud";
+        syncHint.textContent = "Сохранение: Telegram CloudStorage";
+
+        const keys = Object.values(K);
+        // CloudStorage API обычно работает поштучно — грузим последовательно
+        for (const kk of keys) {
+          const v = await cloudGet(kk);
+          if (v != null) {
+            const shortKey = Object.keys(K).find(k => K[k] === kk);
+            if (!shortKey) continue;
+            try {
+              state[shortKey] = JSON.parse(v);
+            } catch (_) {
+              // fallback: number/string
+              const num = Number(v);
+              state[shortKey] = Number.isFinite(num) ? num : v;
+            }
+          }
+        }
+      } else {
+        saveModeEl.textContent = "local";
+        syncHint.textContent = "Сохранение: localStorage";
+        for (const [shortKey, fullKey] of Object.entries(K)) {
+          const raw = localStorage.getItem(fullKey);
+          if (raw != null) {
+            try { state[shortKey] = JSON.parse(raw); }
+            catch (_) {
+              const num = Number(raw);
+              state[shortKey] = Number.isFinite(num) ? num : raw;
+            }
+          }
+        }
+      }
+
+      // sanity
+      state.coins = Number(state.coins) || 0;
+      state.power = clamp(Number(state.power) || 1, 1, 999999);
+
+      state.energyCap = clamp(Number(state.energyCap) || 50, 10, 100000);
+      state.energy = clamp(Number(state.energy) || state.energyCap, 0, state.energyCap);
+
+      state.regenMs = clamp(Number(state.regenMs) || 2000, 250, 20000);
+      state.batteryLvl = clamp(Number(state.batteryLvl) || 0, 0, 99999);
+      state.regenLvl = clamp(Number(state.regenLvl) || 0, 0, 99999);
+
+      state.lastEnergyTs = Number(state.lastEnergyTs) || Date.now();
+
+      // Apply offline regen on load
+      applyOfflineRegen(Date.now());
+      // Ensure last ts not in future
+      state.lastEnergyTs = Math.min(state.lastEnergyTs, Date.now());
+
+      await saveStateDebounced(true);
+      updateUI();
+
+      return usedCloud;
+    }
+
+    let saveTimer = null;
+    let lastSaveAt = 0;
+
+    async function saveStateDebounced(force = false) {
+      const now = Date.now();
+      const minInterval = 600; // ms
+      if (!force && now - lastSaveAt < minInterval) {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => saveStateDebounced(true), minInterval);
+        return;
+      }
+      lastSaveAt = now;
+
+      const payload = {};
+      for (const [shortKey] of Object.entries(K)) payload[shortKey] = state[shortKey];
+
+      if (cloudAvailable()) {
+        for (const [shortKey, fullKey] of Object.entries(K)) {
+          await cloudSet(fullKey, JSON.stringify(payload[shortKey]));
+        }
+        syncHint.textContent = "Сохранение: CloudStorage ✅";
+      } else {
+        for (const [shortKey, fullKey] of Object.entries(K)) {
+          localStorage.setItem(fullKey, JSON.stringify(payload[shortKey]));
+        }
+        syncHint.textContent = "Сохранение: localStorage ✅";
+      }
+      setTimeout(() => {
+        if (modal.classList.contains("open")) {
+          syncHint.textContent = cloudAvailable()
+            ? "Сохранение: Telegram CloudStorage"
+            : "Сохранение: localStorage";
+        }
+      }, 900);
+    }
+
+    // --- Regen loop ---
+    setInterval(() => {
+      applyOfflineRegen(Date.now());
+      updateUI();
+      saveStateDebounced(false);
+    }, 700);
+
+    // --- Tap handling (no double-fire) ---
+    let lastTouchAt = 0;
+
+    function canTap() {
+      if (state.energy <= 0) return false;
+      return true;
+    }
+
+    function handleTap(clientX, clientY) {
+      applyOfflineRegen(Date.now());
+
+      if (!canTap()) {
+        // feedback: shake + rigid haptic
+        gameArea.classList.remove("shake");
+        // reflow
+        void gameArea.offsetWidth;
+        gameArea.classList.add("shake");
+        haptic("rigid");
+        return;
+      }
+
+      state.energy = Math.max(0, state.energy - 1);
+      state.coins += state.power;
+
+      createFloatingText(clientX, clientY, `+${state.power}`);
+
+      // press animation
+      tapImg.classList.add("tap-press");
+      setTimeout(() => tapImg.classList.remove("tap-press"), 70);
+
+      haptic("medium");
+      updateUI();
+      saveStateDebounced(false);
+    }
+
+    tapImg.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      lastTouchAt = Date.now();
+      const t = e.touches[0];
+      if (!t) return;
+      handleTap(t.clientX, t.clientY);
+    }, { passive: false });
+
+    tapImg.addEventListener("click", (e) => {
+      // avoid duplicate click after touch
+      if (Date.now() - lastTouchAt < 450) return;
+      handleTap(e.clientX, e.clientY);
+    });
+
+    // --- Upgrades ---
+    upgradeBtn.addEventListener("click", () => {
+      const cost = computePowerUpgradeCost();
+      if (state.coins < cost) return;
+
+      state.coins -= cost;
+      state.power += 1;
+      haptic("heavy");
+      updateUI();
+      saveStateDebounced(true);
+    });
+
+    buyBatteryBtn.addEventListener("click", () => {
+      const cost = computeBatteryCost();
+      if (state.coins < cost) return;
+
+      state.coins -= cost;
+      state.batteryLvl += 1;
+      state.energyCap += 10;
+      // приятный бонус — даём чуть энергии сразу
+      state.energy = clamp(state.energy + 5, 0, state.energyCap);
+
+      haptic("heavy");
+      updateUI();
+      saveStateDebounced(true);
+    });
+
+    buyRegenBtn.addEventListener("click", () => {
+      const cost = computeRegenCost();
+      if (state.coins < cost) return;
+
+      state.coins -= cost;
+      state.regenLvl += 1;
+      // ускорение на 8% каждый уровень, но не быстрее 0.25s
+      state.regenMs = clamp(Math.round(state.regenMs * 0.92), 250, 20000);
+
+      haptic("heavy");
+      updateUI();
+      saveStateDebounced(true);
+    });
+
+    // --- Modal ---
+    function openModal() {
+      modal.classList.add("open");
+      updateUI();
+    }
+    function closeModalFn() {
+      modal.classList.remove("open");
+    }
+
+    garageBtn.addEventListener("click", openModal);
+    closeModal.addEventListener("click", closeModalFn);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModalFn();
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      // двойное подтверждение через Telegram (если есть) иначе confirm
+      const doReset = async () => {
+        state = {
+          coins: 0,
+          power: 1,
+          energy: 50,
+          energyCap: 50,
+          regenMs: 2000,
+          batteryLvl: 0,
+          regenLvl: 0,
+          lastEnergyTs: Date.now(),
+        };
+        await saveStateDebounced(true);
+        updateUI();
+        closeModalFn();
+      };
+
+      if (inTelegram && tg.showConfirm) {
+        tg.showConfirm("Сбросить прогресс? Это нельзя отменить.", (ok) => {
+          if (ok) doReset();
+        });
+      } else {
+        if (confirm("Сбросить прогресс? Это нельзя отменить.")) doReset();
+      }
+    });
+
+    // --- Asset preload + loader progress ---
+    const assets = ["load.png", "tap.png"];
+    function preloadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = src;
+      });
+    }
+
+    async function boot() {
+      const start = Date.now();
+
+      let done = 0;
+      const total = assets.length + 1; // +1 for loadState
+
+      const tick = (label) => {
+        done++;
+        const pct = Math.round((done / total) * 100);
+        loadingBar.style.width = pct + "%";
+        loadingRight.textContent = pct + "%";
+        document.getElementById("loadingLeft").textContent = label;
+      };
+
+      // preload images
+      for (const a of assets) {
+        await preloadImage(a);
+        tick("Assets…");
+      }
+
+      await loadState();
+      tick("Профиль…");
+
+      updateUI();
+
+      // минимально приятная задержка, чтобы не мигало
+      const minMs = 900;
+      const elapsed = Date.now() - start;
+      const wait = Math.max(0, minMs - elapsed);
+
+      setTimeout(() => {
+        loadingScreen.style.display = "none";
+      }, wait);
+    }
+
+    boot();
+  </script>
 </body>
 </html>
