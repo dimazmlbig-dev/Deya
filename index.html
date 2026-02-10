@@ -15,38 +15,190 @@
       --safeBottom: env(safe-area-inset-bottom, 0px);
     }
 
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f5f5;
+        --panel: rgba(0,0,0,.08);
+      }
+      body {
+        color: #000;
+      }
+      .card {
+        color: #000;
+      }
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg);
       color: #fff;
       overflow: hidden;
       touch-action: manipulation;
+      transition: background-color 0.3s;
     }
 
     /* Loader */
     #loading-screen {
       position: fixed; inset: 0; background: #000 url("load.png") no-repeat center;
-      background-size: cover; z-index: 999; display: flex; align-items: flex-end;
+      background-size: cover; z-index: 9999; display: flex; align-items: flex-end;
       padding: 20px 20px calc(40px + var(--safeBottom));
+      transition: opacity 0.3s;
     }
-    #loading-box { width: 100%; background: rgba(0,0,0,.6); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); }
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loading-box { 
+      width: 100%; 
+      background: rgba(0,0,0,.8); 
+      border-radius: 16px; 
+      padding: 20px; 
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #loading-title { 
+      font-size: 18px; 
+      font-weight: 700; 
+      margin-bottom: 15px;
+      text-align: center;
+    }
     .bar { width: 100%; height: 8px; background: rgba(255,255,255,.1); border-radius: 10px; margin: 10px 0; overflow: hidden; }
-    #loadingBar { display: block; height: 100%; width: 0%; background: var(--gold); transition: width 0.3s; }
+    #loadingBar { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s ease; }
 
     /* Game Interface */
-    .game-container { height: 100vh; display: flex; flex-direction: column; padding: 20px; gap: 15px; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .card { background: var(--panel); padding: 15px; border-radius: var(--radius); text-align: center; }
-    .value { font-size: 24px; font-weight: 900; color: var(--gold); }
-    
-    .game-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
-    #tap-image { width: 80vw; max-width: 350px; transition: transform 0.05s; user-select: none; -webkit-user-drag: none; }
-    
-    .btn-primary { background: var(--gold); color: #000; border: none; padding: 18px; border-radius: 15px; font-weight: 900; width: 100%; }
-    
-    .floating-text { position: absolute; color: var(--gold); font-size: 32px; font-weight: 900; pointer-events: none; animation: floatUp 0.6s ease-out forwards; }
-    @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-120px); opacity: 0; } }
+    .game-container { 
+      height: 100vh; 
+      display: flex; 
+      flex-direction: column; 
+      padding: 20px; 
+      gap: 15px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .game-container.loaded {
+      opacity: 1;
+    }
+    .stats { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 10px;
+      margin-top: env(safe-area-inset-top, 0px);
+    }
+    .card { 
+      background: var(--panel); 
+      padding: 18px 15px; 
+      border-radius: var(--radius); 
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .card div:first-child {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .value { 
+      font-size: 28px; 
+      font-weight: 900; 
+      color: var(--gold);
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+
+    .game-area { 
+      flex: 1; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      position: relative;
+      overflow: hidden;
+    }
+    #tap-image { 
+      width: 80vw; 
+      max-width: 350px; 
+      transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      user-select: none;
+      -webkit-user-drag: none;
+      cursor: pointer;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    }
+    #tap-image.tapped {
+      transform: scale(0.85);
+    }
+
+    .btn-primary { 
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #000; 
+      border: none; 
+      padding: 20px; 
+      border-radius: 15px; 
+      font-weight: 900; 
+      width: 100%; 
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: var(--safeBottom);
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+    .btn-primary:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+    }
+    .btn-primary:disabled {
+      background: #666;
+      color: #999;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .floating-text { 
+      position: absolute; 
+      color: var(--gold); 
+      font-size: 32px; 
+      font-weight: 900; 
+      pointer-events: none; 
+      animation: floatUp 0.8s ease-out forwards;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+    }
+    @keyframes floatUp { 
+      0% { 
+        transform: translateY(0) scale(0.5); 
+        opacity: 1; 
+      } 
+      50% {
+        opacity: 1;
+      }
+      100% { 
+        transform: translateY(-120px) scale(1.2); 
+        opacity: 0; 
+      } 
+    }
+
+    /* Achievement notification */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(0,0,0,0.9);
+      color: var(--gold);
+      padding: 15px 25px;
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,215,0,0.3);
+      z-index: 1000;
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+      font-weight: 700;
+    }
+    .notification.show {
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -54,15 +206,21 @@
   <div id="loading-screen">
     <div id="loading-box">
       <div id="loading-title">Загрузка Артемки...</div>
-      <div class="bar"><i id="loadingBar"></i></div>
+      <div class="bar"><span id="loadingBar"></span></div>
       <div id="loadingStatus">0%</div>
     </div>
   </div>
 
-  <div class="game-container">
+  <div class="game-container" id="gameContainer">
     <div class="stats">
-      <div class="card"><div>АРТЕМКИ</div><div class="value" id="coins">0</div></div>
-      <div class="card"><div>СИЛА</div><div class="value" id="power">1</div></div>
+      <div class="card">
+        <div>АРТЕМКИ</div>
+        <div class="value" id="coins">0</div>
+      </div>
+      <div class="card">
+        <div>СИЛА</div>
+        <div class="value" id="power">1</div>
+      </div>
     </div>
 
     <div class="game-area" id="gameArea">
@@ -75,105 +233,341 @@
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    if (tg) { tg.expand(); tg.ready(); }
+    // Инициализация Telegram Web App
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      try {
+        tg.expand();
+        tg.ready();
+        
+        // Установка цвета фона в соответствии с темой Telegram
+        tg.setBackgroundColor('#000000');
+        
+        // Использование данных пользователя, если они доступны
+        if (tg.initDataUnsafe?.user) {
+          const user = tg.initDataUnsafe.user;
+          console.log('Telegram user:', user.username || user.first_name);
+        }
+      } catch (error) {
+        console.warn('Telegram Web App не доступен:', error);
+      }
+    }
 
+    // Состояние игры
     let state = {
-      coins: parseInt(localStorage.getItem('coins')) || 0,
-      power: parseInt(localStorage.getItem('power')) || 1
+      coins: parseInt(localStorage.getItem('artemka_coins')) || 0,
+      power: parseInt(localStorage.getItem('artemka_power')) || 1,
+      totalTaps: parseInt(localStorage.getItem('artemka_totalTaps')) || 0,
+      lastSave: Date.now()
     };
 
+    // DOM элементы
     const coinsEl = document.getElementById('coins');
     const powerEl = document.getElementById('power');
     const upgradeBtn = document.getElementById('upgradeBtn');
     const tapImg = document.getElementById('tap-image');
+    const gameContainer = document.getElementById('gameContainer');
+    const loadingScreen = document.getElementById('loading-screen');
 
+    // Переменные для управления
+    let isProcessingTap = false;
+    let saveTimeout = null;
+    let floatingTextPool = [];
+    const MAX_FLOATING_TEXTS = 8;
+
+    // Флаги достижений
+    const achievements = {
+      firstUpgrade: localStorage.getItem('artemka_firstUpgrade') === 'true',
+      hundredCoins: localStorage.getItem('artemka_hundredCoins') === 'true',
+      powerFive: localStorage.getItem('artemka_powerFive') === 'true'
+    };
+
+    // Обновление интерфейса
     function updateUI() {
-      coinsEl.textContent = Math.floor(state.coins);
-      powerEl.textContent = state.power;
-      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
-      upgradeBtn.textContent = `Улучшить (+1) — ${cost} 🚗`;
+      coinsEl.textContent = formatNumber(Math.floor(state.coins));
+      powerEl.textContent = formatNumber(state.power);
+      
+      let cost = calculateUpgradeCost();
+      upgradeBtn.textContent = `Улучшить (+1) — ${formatNumber(cost)} 🚗`;
       upgradeBtn.disabled = state.coins < cost;
+      
+      // Проверка достижений
+      checkAchievements();
     }
 
+    // Форматирование чисел (1000 -> 1K)
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toString();
+    }
+
+    // Расчет стоимости улучшения
+    function calculateUpgradeCost() {
+      return Math.round(10 * Math.pow(1.5, state.power - 1));
+    }
+
+    // Обработка нажатия
     function handleTap(x, y) {
+      if (isProcessingTap) return;
+      
+      isProcessingTap = true;
       state.coins += state.power;
+      state.totalTaps++;
+      
+      // Создание плавающего текста
       createFloatingText(x, y, `+${state.power}`);
-      if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
       
-      tapImg.style.transform = 'scale(0.95)';
-      setTimeout(() => tapImg.style.transform = 'scale(1)', 50);
+      // Виброотклик в Telegram
+      if (tg?.HapticFeedback) {
+        try {
+          if (state.power >= 5) {
+            tg.HapticFeedback.impactOccurred('heavy');
+          } else {
+            tg.HapticFeedback.impactOccurred('medium');
+          }
+        } catch (e) {
+          console.warn('Виброотклик не доступен');
+        }
+      }
       
+      // Анимация нажатия
+      tapImg.classList.add('tapped');
+      setTimeout(() => {
+        tapImg.classList.remove('tapped');
+      }, 100);
+      
+      // Автосохранение
       save();
+      
+      // Обновление интерфейса
       updateUI();
+      
+      // Разблокировка обработки
+      setTimeout(() => {
+        isProcessingTap = false;
+      }, 50);
     }
 
+    // Создание плавающего текста с пулом объектов
     function createFloatingText(x, y, text) {
-      const el = document.createElement('div');
-      el.className = 'floating-text';
-      el.style.left = `${x - 20}px`;
-      el.style.top = `${y - 40}px`;
-      el.textContent = text;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 600);
+      let element = floatingTextPool.find(el => !el.inUse);
+      
+      if (!element) {
+        if (floatingTextPool.length >= MAX_FLOATING_TEXTS) {
+          element = floatingTextPool.shift();
+        } else {
+          element = document.createElement('div');
+          element.className = 'floating-text';
+          document.body.appendChild(element);
+        }
+      }
+      
+      element.inUse = true;
+      element.style.left = `${x - 30}px`;
+      element.style.top = `${y - 40}px`;
+      element.textContent = text;
+      element.style.opacity = '1';
+      element.style.animation = 'none';
+      
+      floatingTextPool.push(element);
+      
+      setTimeout(() => {
+        element.style.animation = 'floatUp 0.8s ease-out forwards';
+      }, 10);
+      
+      setTimeout(() => {
+        element.inUse = false;
+        element.style.opacity = '0';
+      }, 800);
     }
 
+    // Покупка улучшения
     upgradeBtn.onclick = () => {
-      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
+      let cost = calculateUpgradeCost();
+      
       if (state.coins >= cost) {
         state.coins -= cost;
         state.power++;
+        
+        // Уведомление о первом улучшении
+        if (!achievements.firstUpgrade) {
+          achievements.firstUpgrade = true;
+          localStorage.setItem('artemka_firstUpgrade', 'true');
+          showNotification('🎉 Первое улучшение!');
+        }
+        
+        // Уведомление о силе 5
+        if (state.power >= 5 && !achievements.powerFive) {
+          achievements.powerFive = true;
+          localStorage.setItem('artemka_powerFive', 'true');
+          showNotification('💪 Сила 5 достигнута!');
+        }
+        
         save();
         updateUI();
-        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        
+        // Успешный виброотклик
+        if (tg?.HapticFeedback) {
+          try {
+            tg.HapticFeedback.notificationOccurred('success');
+          } catch (e) {
+            console.warn('Виброотклик не доступен');
+          }
+        }
       }
     };
 
-    function save() {
-      localStorage.setItem('coins', state.coins);
-      localStorage.setItem('power', state.power);
+    // Показать уведомление
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 100);
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 500);
+      }, 3000);
     }
 
-    // Поддержка мультитача
-    tapImg.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+    // Проверка достижений
+    function checkAchievements() {
+      // 100 монет
+      if (state.coins >= 100 && !achievements.hundredCoins) {
+        achievements.hundredCoins = true;
+        localStorage.setItem('artemka_hundredCoins', 'true');
+        showNotification('💰 100 Артемок собрано!');
       }
-    });
+    }
 
-    // Прелоадер
+    // Сохранение с дебаунсом
+    function save() {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      saveTimeout = setTimeout(() => {
+        localStorage.setItem('artemka_coins', state.coins.toString());
+        localStorage.setItem('artemka_power', state.power.toString());
+        localStorage.setItem('artemka_totalTaps', state.totalTaps.toString());
+        state.lastSave = Date.now();
+      }, 2000);
+    }
+
+    // Обработчики событий
+    function setupEventListeners() {
+      // Касания
+      tapImg.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+        }
+      }, { passive: false });
+
+      // Мышь
+      tapImg.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handleTap(e.clientX, e.clientY);
+      });
+
+      // Клавиатура (пробел для тестирования)
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          const rect = tapImg.getBoundingClientRect();
+          handleTap(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        }
+      });
+    }
+
+    // Загрузка игры
     async function boot() {
       const bar = document.getElementById('loadingBar');
       const status = document.getElementById('loadingStatus');
       
-      const images = ['load.png', 'tap.png'];
-      let loaded = 0;
-
-      for (let src of images) {
-        await new Promise(res => {
-          const img = new Image();
-          img.onload = img.onerror = res;
-          img.src = src;
-        });
-        loaded++;
-        let p = Math.round((loaded / (images.length + 1)) * 100);
-        bar.style.width = p + '%';
-        status.textContent = p + '%';
-      }
-
-      // Эмуляция загрузки профиля (чтобы не висло)
-      setTimeout(() => {
-        bar.style.width = '100%';
-        status.textContent = '100%';
-        setTimeout(() => {
-          document.getElementById('loading-screen').style.display = 'none';
-        }, 500);
-      }, 500);
+      // Изображения для предзагрузки
+      const images = [
+        { src: 'load.png', isEssential: true },
+        { src: 'tap.png', isEssential: true }
+      ];
       
-      updateUI();
+      let loaded = 0;
+      let failed = 0;
+      
+      try {
+        for (let img of images) {
+          await new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => {
+              loaded++;
+              resolve();
+            };
+            image.onerror = () => {
+              if (img.isEssential) {
+                failed++;
+                console.error(`Не удалось загрузить: ${img.src}`);
+              }
+              resolve();
+            };
+            image.src = img.src;
+          });
+          
+          // Обновление прогресса
+          const progress = Math.round((loaded / images.length) * 100);
+          if (bar) bar.style.width = progress + '%';
+          if (status) status.textContent = progress + '%';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки:', error);
+      }
+      
+      // Дополнительное время для плавного перехода
+      setTimeout(() => {
+        if (failed > 0 && loaded === 0) {
+          if (status) status.textContent = 'Ошибка загрузки';
+          setTimeout(boot, 2000); // Повторная попытка
+          return;
+        }
+        
+        if (bar) bar.style.width = '100%';
+        if (status) status.textContent = '100%';
+        
+        // Плавное скрытие загрузки
+        setTimeout(() => {
+          if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+          }
+          
+          if (gameContainer) {
+            gameContainer.classList.add('loaded');
+          }
+          
+          // Настройка обработчиков событий
+          setupEventListeners();
+          
+          // Первоначальное обновление интерфейса
+          updateUI();
+          
+          // Автосохранение при закрытии
+          window.addEventListener('beforeunload', () => {
+            clearTimeout(saveTimeout);
+            save();
+          });
+          
+        }, 300);
+      }, 500);
     }
 
+    // Запуск игры
     boot();
   </script>
 </body>
