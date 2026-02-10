@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>🚗 Artemka Driver</title>
+  
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
   <style>
     :root {
@@ -15,19 +19,6 @@
       --safeBottom: env(safe-area-inset-bottom, 0px);
     }
 
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f5f5f5;
-        --panel: rgba(0,0,0,.08);
-      }
-      body {
-        color: #000;
-      }
-      .card {
-        color: #000;
-      }
-    }
-
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -35,170 +26,50 @@
       color: #fff;
       overflow: hidden;
       touch-action: manipulation;
-      transition: background-color 0.3s;
     }
+
+    /* Табло лидеров */
+    .leaderboard {
+      position: absolute;
+      left: 10px;
+      top: 100px;
+      width: 110px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: 8px;
+      z-index: 100;
+      font-size: 10px;
+      backdrop-filter: blur(5px);
+    }
+    .leaderboard h4 { text-align: center; color: var(--gold); margin-bottom: 5px; font-size: 11px; text-transform: uppercase; }
+    .leader-row { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+    .leader-row b { color: var(--gold); }
 
     /* Loader */
     #loading-screen {
       position: fixed; inset: 0; background: #000 url("load.png") no-repeat center;
       background-size: cover; z-index: 9999; display: flex; align-items: flex-end;
       padding: 20px 20px calc(40px + var(--safeBottom));
-      transition: opacity 0.3s;
     }
-    #loading-screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    #loading-box { 
-      width: 100%; 
-      background: rgba(0,0,0,.8); 
-      border-radius: 16px; 
-      padding: 20px; 
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    #loading-title { 
-      font-size: 18px; 
-      font-weight: 700; 
-      margin-bottom: 15px;
-      text-align: center;
-    }
+    #loading-box { width: 100%; background: rgba(0,0,0,.8); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); }
     .bar { width: 100%; height: 8px; background: rgba(255,255,255,.1); border-radius: 10px; margin: 10px 0; overflow: hidden; }
-    #loadingBar { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s ease; }
+    #loadingBar { display: block; height: 100%; width: 0%; background: var(--gold); transition: width 0.3s; }
 
     /* Game Interface */
-    .game-container { 
-      height: 100vh; 
-      display: flex; 
-      flex-direction: column; 
-      padding: 20px; 
-      gap: 15px;
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-    .game-container.loaded {
-      opacity: 1;
-    }
-    .stats { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 10px;
-      margin-top: env(safe-area-inset-top, 0px);
-    }
-    .card { 
-      background: var(--panel); 
-      padding: 18px 15px; 
-      border-radius: var(--radius); 
-      text-align: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.05);
-    }
-    .card div:first-child {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .value { 
-      font-size: 28px; 
-      font-weight: 900; 
-      color: var(--gold);
-      text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-    }
+    .game-container { height: 100vh; display: flex; flex-direction: column; padding: 20px; gap: 15px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: env(safe-area-inset-top, 0px); }
+    .card { background: var(--panel); padding: 15px; border-radius: var(--radius); text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+    .value { font-size: 28px; font-weight: 900; color: var(--gold); }
 
-    .game-area { 
-      flex: 1; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      position: relative;
-      overflow: hidden;
-    }
-    #tap-image { 
-      width: 80vw; 
-      max-width: 350px; 
-      transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      user-select: none;
-      -webkit-user-drag: none;
-      cursor: pointer;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
-    }
-    #tap-image.tapped {
-      transform: scale(0.85);
-    }
+    .game-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+    #tap-image { width: 80vw; max-width: 350px; transition: transform 0.05s; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+    
+    .btn-primary { background: var(--gold); color: #000; border: none; padding: 20px; border-radius: 15px; font-weight: 900; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+    .btn-primary:disabled { background: #666; color: #999; box-shadow: none; }
 
-    .btn-primary { 
-      background: linear-gradient(135deg, #FFD700, #FFA500);
-      color: #000; 
-      border: none; 
-      padding: 20px; 
-      border-radius: 15px; 
-      font-weight: 900; 
-      width: 100%; 
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: var(--safeBottom);
-      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-    }
-    .btn-primary:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
-    }
-    .btn-primary:disabled {
-      background: #666;
-      color: #999;
-      cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-
-    .floating-text { 
-      position: absolute; 
-      color: var(--gold); 
-      font-size: 32px; 
-      font-weight: 900; 
-      pointer-events: none; 
-      animation: floatUp 0.8s ease-out forwards;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-      z-index: 100;
-      opacity: 0;
-    }
-    @keyframes floatUp { 
-      0% { 
-        transform: translateY(0) scale(0.5); 
-        opacity: 1; 
-      } 
-      50% {
-        opacity: 1;
-      }
-      100% { 
-        transform: translateY(-120px) scale(1.2); 
-        opacity: 0; 
-      } 
-    }
-
-    /* Achievement notification */
-    .notification {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-100px);
-      background: rgba(0,0,0,0.9);
-      color: var(--gold);
-      padding: 15px 25px;
-      border-radius: 12px;
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,215,0,0.3);
-      z-index: 1000;
-      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      text-align: center;
-      font-weight: 700;
-    }
-    .notification.show {
-      transform: translateX(-50%) translateY(0);
-    }
+    .floating-text { position: absolute; color: var(--gold); font-size: 32px; font-weight: 900; pointer-events: none; animation: floatUp 0.6s ease-out forwards; z-index: 100; }
+    @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-120px); opacity: 0; } }
   </style>
 </head>
 <body>
@@ -211,16 +82,15 @@
     </div>
   </div>
 
-  <div class="game-container" id="gameContainer">
+  <div class="leaderboard">
+    <h4>🏆 ТОП-5</h4>
+    <div id="leaderList">Загрузка...</div>
+  </div>
+
+  <div class="game-container">
     <div class="stats">
-      <div class="card">
-        <div>АРТЕМКИ</div>
-        <div class="value" id="coins">0</div>
-      </div>
-      <div class="card">
-        <div>СИЛА</div>
-        <div class="value" id="power">1</div>
-      </div>
+      <div class="card"><div>АРТЕМКИ</div><div class="value" id="coins">0</div></div>
+      <div class="card"><div>СИЛА</div><div class="value" id="power">1</div></div>
     </div>
 
     <div class="game-area" id="gameArea">
@@ -228,37 +98,36 @@
     </div>
 
     <div class="controls">
-      <button class="btn-primary" id="upgradeBtn">Улучшить за 10 🚗</button>
+      <button class="btn-primary" id="upgradeBtn">Улучшить (+1) — 10 🚗</button>
     </div>
   </div>
 
   <script>
-    // Инициализация Telegram Web App
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      try {
-        tg.expand();
-        tg.ready();
-        
-        // Установка цвета фона в соответствии с темой Telegram
-        tg.setBackgroundColor('#000000');
-        
-        // Использование данных пользователя, если они доступны
-        if (tg.initDataUnsafe?.user) {
-          const user = tg.initDataUnsafe.user;
-          console.log('Telegram user:', user.username || user.first_name);
-        }
-      } catch (error) {
-        console.warn('Telegram Web App не доступен:', error);
-      }
-    }
+    // 1. КОНФИГУРАЦИЯ FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyByjb1N0JKk0gyulwmqVe9Kq6mZ8OVuABg",
+      authDomain: "artemkadriver.firebaseapp.com",
+      databaseURL: "https://artemkadriver-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "artemkadriver",
+      storageBucket: "artemkadriver.firebasestorage.app",
+      messagingSenderId: "234383466784",
+      appId: "1:234383466784:web:eb8fa37f0c37d6f343f745",
+      measurementId: "G-3KHDHQ8PTB"
+    };
 
-    // Состояние игры
+    // Инициализация Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 2. TELEGRAM И ПОЛЬЗОВАТЕЛЬ
+    const tg = window.Telegram?.WebApp;
+    const user = tg?.initDataUnsafe?.user || { id: "guest_" + Math.floor(Math.random()*1000), first_name: "Гость" };
+    if (tg) { tg.expand(); tg.ready(); }
+
+    // 3. СОСТОЯНИЕ ИГРЫ
     let state = {
       coins: parseInt(localStorage.getItem('artemka_coins')) || 0,
-      power: parseInt(localStorage.getItem('artemka_power')) || 1,
-      totalTaps: parseInt(localStorage.getItem('artemka_totalTaps')) || 0,
-      lastSave: Date.now()
+      power: parseInt(localStorage.getItem('artemka_power')) || 1
     };
 
     // DOM элементы
@@ -266,308 +135,113 @@
     const powerEl = document.getElementById('power');
     const upgradeBtn = document.getElementById('upgradeBtn');
     const tapImg = document.getElementById('tap-image');
-    const gameContainer = document.getElementById('gameContainer');
-    const loadingScreen = document.getElementById('loading-screen');
 
-    // Переменные для управления
-    let isProcessingTap = false;
-    let saveTimeout = null;
-    let floatingTextPool = [];
-    const MAX_FLOATING_TEXTS = 8;
-
-    // Флаги достижений
-    const achievements = {
-      firstUpgrade: localStorage.getItem('artemka_firstUpgrade') === 'true',
-      hundredCoins: localStorage.getItem('artemka_hundredCoins') === 'true',
-      powerFive: localStorage.getItem('artemka_powerFive') === 'true'
-    };
-
-    // Обновление интерфейса
+    // 4. ФУНКЦИИ
     function updateUI() {
-      coinsEl.textContent = formatNumber(Math.floor(state.coins));
-      powerEl.textContent = formatNumber(state.power);
-      
-      let cost = calculateUpgradeCost();
-      upgradeBtn.textContent = `Улучшить (+1) — ${formatNumber(cost)} 🚗`;
+      coinsEl.textContent = Math.floor(state.coins);
+      powerEl.textContent = state.power;
+      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
+      upgradeBtn.textContent = `Улучшить (+1) — ${cost} 🚗`;
       upgradeBtn.disabled = state.coins < cost;
+    }
+
+    // Сохранение в Firebase и локально
+    function saveAndSync() {
+      localStorage.setItem('artemka_coins', state.coins);
+      localStorage.setItem('artemka_power', state.power);
       
-      // Проверка достижений
-      checkAchievements();
+      db.ref('users/' + user.id).set({
+        name: user.first_name,
+        coins: state.coins,
+        power: state.power,
+        lastActive: Date.now()
+      });
     }
 
-    // Форматирование чисел (1000 -> 1K)
-    function formatNumber(num) {
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-      return num.toString();
+    // Обновление табло лидеров
+    function updateLeaderboard() {
+      db.ref('users').orderByChild('coins').limitToLast(5).on('value', (snapshot) => {
+        const data = snapshot.val();
+        const listEl = document.getElementById('leaderList');
+        if (!data) return;
+        
+        listEl.innerHTML = '';
+        const sorted = Object.values(data).sort((a, b) => b.coins - a.coins);
+        sorted.forEach((u, i) => {
+          listEl.innerHTML += `<div class="leader-row"><span>${i+1}. ${u.name}</span><b>${Math.floor(u.coins)}</b></div>`;
+        });
+      });
     }
 
-    // Расчет стоимости улучшения
-    function calculateUpgradeCost() {
-      return Math.round(10 * Math.pow(1.5, state.power - 1));
-    }
-
-    // Обработка нажатия
     function handleTap(x, y) {
-      if (isProcessingTap) return;
-      
-      isProcessingTap = true;
       state.coins += state.power;
-      state.totalTaps++;
-      
-      // Создание плавающего текста
       createFloatingText(x, y, `+${state.power}`);
       
-      // Виброотклик в Telegram
-      if (tg?.HapticFeedback) {
-        try {
-          if (state.power >= 5) {
-            tg.HapticFeedback.impactOccurred('heavy');
-          } else {
-            tg.HapticFeedback.impactOccurred('medium');
-          }
-        } catch (e) {
-          console.warn('Виброотклик не доступен');
-        }
-      }
+      // Анимация
+      tapImg.style.transform = 'scale(0.95)';
+      setTimeout(() => tapImg.style.transform = 'scale(1)', 50);
       
-      // Анимация нажатия
-      tapImg.classList.add('tapped');
-      setTimeout(() => {
-        tapImg.classList.remove('tapped');
-      }, 100);
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
       
-      // Автосохранение
-      save();
-      
-      // Обновление интерфейса
       updateUI();
-      
-      // Разблокировка обработки
-      setTimeout(() => {
-        isProcessingTap = false;
-      }, 50);
+      saveAndSync();
     }
 
-    // Создание плавающего текста с пулом объектов
     function createFloatingText(x, y, text) {
-      let element = floatingTextPool.find(el => !el.inUse);
-      
-      if (!element) {
-        if (floatingTextPool.length >= MAX_FLOATING_TEXTS) {
-          element = floatingTextPool.shift();
-        } else {
-          element = document.createElement('div');
-          element.className = 'floating-text';
-          document.body.appendChild(element);
-        }
-      }
-      
-      element.inUse = true;
-      element.style.left = `${x - 30}px`;
-      element.style.top = `${y - 40}px`;
-      element.textContent = text;
-      element.style.opacity = '1';
-      element.style.animation = 'none';
-      
-      floatingTextPool.push(element);
-      
-      setTimeout(() => {
-        element.style.animation = 'floatUp 0.8s ease-out forwards';
-      }, 10);
-      
-      setTimeout(() => {
-        element.inUse = false;
-        element.style.opacity = '0';
-      }, 800);
+      const el = document.createElement('div');
+      el.className = 'floating-text';
+      el.style.left = `${x - 20}px`;
+      el.style.top = `${y - 40}px`;
+      el.textContent = text;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 600);
     }
 
-    // Покупка улучшения
+    // 5. СОБЫТИЯ
+    tapImg.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+      }
+    });
+
     upgradeBtn.onclick = () => {
-      let cost = calculateUpgradeCost();
-      
+      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
       if (state.coins >= cost) {
         state.coins -= cost;
         state.power++;
-        
-        // Уведомление о первом улучшении
-        if (!achievements.firstUpgrade) {
-          achievements.firstUpgrade = true;
-          localStorage.setItem('artemka_firstUpgrade', 'true');
-          showNotification('🎉 Первое улучшение!');
-        }
-        
-        // Уведомление о силе 5
-        if (state.power >= 5 && !achievements.powerFive) {
-          achievements.powerFive = true;
-          localStorage.setItem('artemka_powerFive', 'true');
-          showNotification('💪 Сила 5 достигнута!');
-        }
-        
-        save();
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         updateUI();
-        
-        // Успешный виброотклик
-        if (tg?.HapticFeedback) {
-          try {
-            tg.HapticFeedback.notificationOccurred('success');
-          } catch (e) {
-            console.warn('Виброотклик не доступен');
-          }
-        }
+        saveAndSync();
       }
     };
 
-    // Показать уведомление
-    function showNotification(message) {
-      const notification = document.createElement('div');
-      notification.className = 'notification';
-      notification.textContent = message;
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.classList.add('show');
-      }, 100);
-      
-      setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-          }
-        }, 500);
-      }, 3000);
-    }
-
-    // Проверка достижений
-    function checkAchievements() {
-      // 100 монет
-      if (state.coins >= 100 && !achievements.hundredCoins) {
-        achievements.hundredCoins = true;
-        localStorage.setItem('artemka_hundredCoins', 'true');
-        showNotification('💰 100 Артемок собрано!');
-      }
-    }
-
-    // Сохранение с дебаунсом
-    function save() {
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-      }
-      
-      saveTimeout = setTimeout(() => {
-        localStorage.setItem('artemka_coins', state.coins.toString());
-        localStorage.setItem('artemka_power', state.power.toString());
-        localStorage.setItem('artemka_totalTaps', state.totalTaps.toString());
-        state.lastSave = Date.now();
-      }, 2000);
-    }
-
-    // Обработчики событий
-    function setupEventListeners() {
-      // Касания
-      tapImg.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-        }
-      }, { passive: false });
-
-      // Мышь
-      tapImg.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        handleTap(e.clientX, e.clientY);
-      });
-
-      // Клавиатура (пробел для тестирования)
-      document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space') {
-          e.preventDefault();
-          const rect = tapImg.getBoundingClientRect();
-          handleTap(rect.left + rect.width / 2, rect.top + rect.height / 2);
-        }
-      });
-    }
-
-    // Загрузка игры
+    // 6. ЗАГРУЗКА
     async function boot() {
       const bar = document.getElementById('loadingBar');
       const status = document.getElementById('loadingStatus');
-      
-      // Изображения для предзагрузки
-      const images = [
-        { src: 'load.png', isEssential: true },
-        { src: 'tap.png', isEssential: true }
-      ];
-      
+      const images = ['load.png', 'tap.png'];
       let loaded = 0;
-      let failed = 0;
-      
-      try {
-        for (let img of images) {
-          await new Promise((resolve) => {
-            const image = new Image();
-            image.onload = () => {
-              loaded++;
-              resolve();
-            };
-            image.onerror = () => {
-              if (img.isEssential) {
-                failed++;
-                console.error(`Не удалось загрузить: ${img.src}`);
-              }
-              resolve();
-            };
-            image.src = img.src;
-          });
-          
-          // Обновление прогресса
-          const progress = Math.round((loaded / images.length) * 100);
-          if (bar) bar.style.width = progress + '%';
-          if (status) status.textContent = progress + '%';
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки:', error);
+
+      for (let src of images) {
+        await new Promise(res => {
+          const img = new Image();
+          img.onload = img.onerror = res;
+          img.src = src;
+        });
+        loaded++;
+        let p = Math.round((loaded / images.length) * 100);
+        bar.style.width = p + '%';
+        status.textContent = p + '%';
       }
-      
-      // Дополнительное время для плавного перехода
+
       setTimeout(() => {
-        if (failed > 0 && loaded === 0) {
-          if (status) status.textContent = 'Ошибка загрузки';
-          setTimeout(boot, 2000); // Повторная попытка
-          return;
-        }
-        
-        if (bar) bar.style.width = '100%';
-        if (status) status.textContent = '100%';
-        
-        // Плавное скрытие загрузки
-        setTimeout(() => {
-          if (loadingScreen) {
-            loadingScreen.classList.add('hidden');
-          }
-          
-          if (gameContainer) {
-            gameContainer.classList.add('loaded');
-          }
-          
-          // Настройка обработчиков событий
-          setupEventListeners();
-          
-          // Первоначальное обновление интерфейса
-          updateUI();
-          
-          // Автосохранение при закрытии
-          window.addEventListener('beforeunload', () => {
-            clearTimeout(saveTimeout);
-            save();
-          });
-          
-        }, 300);
+        document.getElementById('loading-screen').style.display = 'none';
+        updateUI();
+        updateLeaderboard();
       }, 500);
     }
 
-    // Запуск игры
     boot();
   </script>
 </body>
