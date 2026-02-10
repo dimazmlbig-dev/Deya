@@ -6,84 +6,50 @@
   <title>🚗 Artemka Driver</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
   <style>
-    :root {
-      --bg: #000;
-      --panel: rgba(255,255,255,.10);
-      --gold: #FFD700;
-      --radius: 22px;
-      --safeBottom: env(safe-area-inset-bottom, 0px);
-    }
-
+    :root { --bg: #000; --panel: rgba(255,255,255,.10); --gold: #FFD700; --radius: 22px; }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: #fff;
-      overflow: hidden;
-      touch-action: manipulation;
-    }
+    body { font-family: sans-serif; background: var(--bg); color: #fff; overflow: hidden; touch-action: manipulation; }
 
-    /* Табло лидеров */
-    .leaderboard {
-      position: absolute;
-      left: 10px;
-      top: 100px;
-      width: 110px;
-      background: rgba(0, 0, 0, 0.7);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: 8px;
-      z-index: 100;
-      font-size: 10px;
-      backdrop-filter: blur(5px);
-    }
-    .leaderboard h4 { text-align: center; color: var(--gold); margin-bottom: 5px; font-size: 11px; text-transform: uppercase; }
-    .leader-row { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
-    .leader-row b { color: var(--gold); }
+    /* Табло лидеров с аватарами */
+    .leaderboard { position: absolute; left: 10px; top: 85px; width: 125px; background: rgba(0,0,0,0.85); border: 1px solid var(--gold); border-radius: 15px; padding: 10px; z-index: 100; backdrop-filter: blur(8px); }
+    .leader-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+    .avatar { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--gold); object-fit: cover; background: #222; }
+    .leader-row b { color: var(--gold); margin-left: auto; }
 
-    /* Loader */
-    #loading-screen {
-      position: fixed; inset: 0; background: #000 url("load.png") no-repeat center;
-      background-size: cover; z-index: 9999; display: flex; align-items: flex-end;
-      padding: 20px 20px calc(40px + var(--safeBottom));
-    }
-    #loading-box { width: 100%; background: rgba(0,0,0,.8); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); }
-    .bar { width: 100%; height: 8px; background: rgba(255,255,255,.1); border-radius: 10px; margin: 10px 0; overflow: hidden; }
-    #loadingBar { display: block; height: 100%; width: 0%; background: var(--gold); transition: width 0.3s; }
-
-    /* Game Interface */
-    .game-container { height: 100vh; display: flex; flex-direction: column; padding: 20px; gap: 15px; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: env(safe-area-inset-top, 0px); }
+    /* Статистика и кнопки */
+    .game-container { height: 100vh; display: flex; flex-direction: column; padding: 20px; gap: 10px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .card { background: var(--panel); padding: 15px; border-radius: var(--radius); text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-    .value { font-size: 28px; font-weight: 900; color: var(--gold); }
+    .value { font-size: 26px; font-weight: 900; color: var(--gold); }
 
     .game-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
-    #tap-image { width: 80vw; max-width: 350px; transition: transform 0.05s; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+    #tap-image { width: 85vw; max-width: 350px; transition: transform 0.05s; pointer-events: auto; }
     
-    .btn-primary { background: var(--gold); color: #000; border: none; padding: 20px; border-radius: 15px; font-weight: 900; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
-    .btn-primary:disabled { background: #666; color: #999; box-shadow: none; }
+    .btn-primary { background: var(--gold); color: #000; border: none; padding: 18px; border-radius: 18px; font-weight: 900; width: 100%; font-size: 15px; margin-bottom: 8px; cursor: pointer; }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--gold); padding: 12px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 13px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .floating-text { position: absolute; color: var(--gold); font-size: 32px; font-weight: 900; pointer-events: none; animation: floatUp 0.6s ease-out forwards; z-index: 100; }
-    @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-120px); opacity: 0; } }
+    /* Загрузка */
+    #loading-screen { position: fixed; inset: 0; background: #000 url("load.png") no-repeat center; background-size: cover; z-index: 9999; display: flex; align-items: flex-end; padding: 50px 20px; }
+    .bar-container { width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 10px; margin-top: 10px; overflow: hidden; }
+    #loadingBar { height: 100%; width: 0%; background: var(--gold); transition: width 0.2s; display: block; }
   </style>
 </head>
 <body>
 
   <div id="loading-screen">
-    <div id="loading-box">
-      <div id="loading-title">Загрузка Артемки...</div>
-      <div class="bar"><span id="loadingBar"></span></div>
-      <div id="loadingStatus">0%</div>
+    <div style="width:100%">
+      <div id="loadingStatus" style="text-align:center; font-weight:bold;">0%</div>
+      <div class="bar-container"><span id="loadingBar"></span></div>
     </div>
   </div>
 
   <div class="leaderboard">
-    <h4>🏆 ТОП-5</h4>
+    <h4 style="font-size:11px; color:var(--gold); text-align:center; margin-bottom:6px">🏆 ТОП ГАРАЖА</h4>
     <div id="leaderList">Загрузка...</div>
   </div>
 
@@ -93,153 +59,151 @@
       <div class="card"><div>СИЛА</div><div class="value" id="power">1</div></div>
     </div>
 
-    <div class="game-area" id="gameArea">
+    <div class="game-area">
       <img src="tap.png" id="tap-image" alt="TAP" />
     </div>
 
     <div class="controls">
-      <button class="btn-primary" id="upgradeBtn">Улучшить (+1) — 10 🚗</button>
+      <button class="btn-primary" id="upgradeBtn">Улучшить силу</button>
+      <button class="btn-secondary" id="autoBtn">Автомойка (0/сек) — 50 🚗</button>
     </div>
   </div>
 
   <script>
-    // 1. КОНФИГУРАЦИЯ FIREBASE
+    // Настройки Firebase из твоих данных
     const firebaseConfig = {
       apiKey: "AIzaSyByjb1N0JKk0gyulwmqVe9Kq6mZ8OVuABg",
       authDomain: "artemkadriver.firebaseapp.com",
       databaseURL: "https://artemkadriver-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "artemkadriver",
       storageBucket: "artemkadriver.firebasestorage.app",
-      messagingSenderId: "234383466784",
-      appId: "1:234383466784:web:eb8fa37f0c37d6f343f745",
-      measurementId: "G-3KHDHQ8PTB"
+      appId: "1:234383466784:web:eb8fa37f0c37d6f343f745"
     };
 
-    // Инициализация Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
-    // 2. TELEGRAM И ПОЛЬЗОВАТЕЛЬ
+    
+    // Telegram данные
     const tg = window.Telegram?.WebApp;
-    const user = tg?.initDataUnsafe?.user || { id: "guest_" + Math.floor(Math.random()*1000), first_name: "Гость" };
+    const user = tg?.initDataUnsafe?.user || { id: "test_user", first_name: "Водитель", photo_url: "" };
     if (tg) { tg.expand(); tg.ready(); }
 
-    // 3. СОСТОЯНИЕ ИГРЫ
+    // Состояние игры
     let state = {
-      coins: parseInt(localStorage.getItem('artemka_coins')) || 0,
-      power: parseInt(localStorage.getItem('artemka_power')) || 1
+      coins: parseFloat(localStorage.getItem('art_c')) || 0,
+      power: parseInt(localStorage.getItem('art_p')) || 1,
+      auto: parseInt(localStorage.getItem('art_a')) || 0
     };
 
-    // DOM элементы
-    const coinsEl = document.getElementById('coins');
-    const powerEl = document.getElementById('power');
-    const upgradeBtn = document.getElementById('upgradeBtn');
-    const tapImg = document.getElementById('tap-image');
-
-    // 4. ФУНКЦИИ
     function updateUI() {
-      coinsEl.textContent = Math.floor(state.coins);
-      powerEl.textContent = state.power;
-      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
-      upgradeBtn.textContent = `Улучшить (+1) — ${cost} 🚗`;
-      upgradeBtn.disabled = state.coins < cost;
+      document.getElementById('coins').textContent = Math.floor(state.coins);
+      document.getElementById('power').textContent = state.power;
+      
+      let pCost = Math.round(10 * Math.pow(1.6, state.power - 1));
+      document.getElementById('upgradeBtn').textContent = `Улучшить (+1) — ${pCost} 🚗`;
+      document.getElementById('upgradeBtn').disabled = state.coins < pCost;
+
+      let aCost = Math.round(50 * Math.pow(2.2, state.auto));
+      document.getElementById('autoBtn').textContent = `Автомойка (+${state.auto}/с) — ${aCost} 🚗`;
+      document.getElementById('autoBtn').disabled = state.coins < aCost;
     }
 
-    // Сохранение в Firebase и локально
-    function saveAndSync() {
-      localStorage.setItem('artemka_coins', state.coins);
-      localStorage.setItem('artemka_power', state.power);
-      
+    function save() {
+      localStorage.setItem('art_c', state.coins);
+      localStorage.setItem('art_p', state.power);
+      localStorage.setItem('art_a', state.auto);
+      // Отправка в Firebase
       db.ref('users/' + user.id).set({
         name: user.first_name,
-        coins: state.coins,
-        power: state.power,
-        lastActive: Date.now()
+        coins: Math.floor(state.coins),
+        img: user.photo_url || ""
       });
     }
 
-    // Обновление табло лидеров
-    function updateLeaderboard() {
-      db.ref('users').orderByChild('coins').limitToLast(5).on('value', (snapshot) => {
-        const data = snapshot.val();
-        const listEl = document.getElementById('leaderList');
-        if (!data) return;
-        
-        listEl.innerHTML = '';
-        const sorted = Object.values(data).sort((a, b) => b.coins - a.coins);
-        sorted.forEach((u, i) => {
-          listEl.innerHTML += `<div class="leader-row"><span>${i+1}. ${u.name}</span><b>${Math.floor(u.coins)}</b></div>`;
-        });
-      });
-    }
-
-    function handleTap(x, y) {
+    // Обработка тапа
+    document.getElementById('tap-image').addEventListener('touchstart', (e) => {
+      e.preventDefault();
       state.coins += state.power;
-      createFloatingText(x, y, `+${state.power}`);
       
-      // Анимация
-      tapImg.style.transform = 'scale(0.95)';
-      setTimeout(() => tapImg.style.transform = 'scale(1)', 50);
+      const img = document.getElementById('tap-image');
+      img.style.transform = 'scale(0.92)';
+      setTimeout(() => img.style.transform = 'scale(1)', 50);
       
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-      
       updateUI();
-      saveAndSync();
-    }
-
-    function createFloatingText(x, y, text) {
-      const el = document.createElement('div');
-      el.className = 'floating-text';
-      el.style.left = `${x - 20}px`;
-      el.style.top = `${y - 40}px`;
-      el.textContent = text;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 600);
-    }
-
-    // 5. СОБЫТИЯ
-    tapImg.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-      }
     });
 
-    upgradeBtn.onclick = () => {
-      let cost = Math.round(10 * Math.pow(1.5, state.power - 1));
+    // Покупка Силы
+    document.getElementById('upgradeBtn').onclick = () => {
+      let cost = Math.round(10 * Math.pow(1.6, state.power - 1));
       if (state.coins >= cost) {
         state.coins -= cost;
         state.power++;
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        save();
         updateUI();
-        saveAndSync();
       }
     };
 
-    // 6. ЗАГРУЗКА
-    async function boot() {
-      const bar = document.getElementById('loadingBar');
-      const status = document.getElementById('loadingStatus');
-      const images = ['load.png', 'tap.png'];
-      let loaded = 0;
-
-      for (let src of images) {
-        await new Promise(res => {
-          const img = new Image();
-          img.onload = img.onerror = res;
-          img.src = src;
-        });
-        loaded++;
-        let p = Math.round((loaded / images.length) * 100);
-        bar.style.width = p + '%';
-        status.textContent = p + '%';
+    // Покупка Автомойки
+    document.getElementById('autoBtn').onclick = () => {
+      let cost = Math.round(50 * Math.pow(2.2, state.auto));
+      if (state.coins >= cost) {
+        state.coins -= cost;
+        state.auto++;
+        save();
+        updateUI();
       }
+    };
 
+    // Пассивный доход
+    setInterval(() => {
+      if (state.auto > 0) {
+        state.coins += (state.auto / 10);
+        updateUI();
+      }
+    }, 100);
+
+    // Автосохранение в БД
+    setInterval(save, 5000);
+
+    // Рейтинг с аватарами
+    function loadLeaderboard() {
+      db.ref('users').orderByChild('coins').limitToLast(5).on('value', (snapshot) => {
+        const list = document.getElementById('leaderList');
+        list.innerHTML = '';
+        const data = snapshot.val();
+        if (!data) return;
+
+        const sorted = Object.values(data).sort((a, b) => b.coins - a.coins);
+        sorted.forEach((u, i) => {
+          const photo = u.img ? `<img src="${u.img}" class="avatar">` : `<div class="avatar" style="background:#444"></div>`;
+          list.innerHTML += `
+            <div class="leader-row">
+              ${photo}
+              <span>${u.name.slice(0,8)}</span>
+              <b>${u.coins}</b>
+            </div>`;
+        });
+      });
+    }
+
+    // Загрузка
+    async function boot() {
+      loadLeaderboard();
+      const bar = document.getElementById('loadingBar');
+      const stat = document.getElementById('loadingStatus');
+      
+      for(let i=0; i<=100; i+=5) {
+        bar.style.width = i + '%';
+        stat.textContent = i + '%';
+        await new Promise(r => setTimeout(r, 40));
+      }
+      
+      document.getElementById('loading-screen').style.opacity = '0';
       setTimeout(() => {
         document.getElementById('loading-screen').style.display = 'none';
-        updateUI();
-        updateLeaderboard();
       }, 500);
+      updateUI();
     }
 
     boot();
