@@ -83,7 +83,7 @@
   <div class="debugBox" id="debugBox"></div>
 
   <script>
-    const BACKEND_URL = "https://functions.yandexcloud.net/d4eo5bd6pflq6musmfba";
+    const BACKEND_URL = "https://functions.yandexcloud.net/d4eo5bd6pflq6musmfba/auth/telegram";
 
     const firebaseConfig = {
       apiKey: "AIzaSyByjb1N0JKk0gyulwmqVe9Kq6mZ8OVuABg",
@@ -212,19 +212,23 @@
       }
     }
 
+    async function loginAsGuest(reason = "") {
+      await auth.signInAnonymously();
+      uid = auth.currentUser.uid;
+      profile = { name: "Гость", img: "" };
+      await ensureUserInitialized();
+      subscribeMyData();
+      subscribeLeaderboard();
+      statusLine.textContent = reason ? `Готово (гость): ${reason}` : "Готово (гость)";
+    }
+
     async function login() {
       statusLine.textContent = "Авторизация…";
 
       // В Telegram должно быть initData, иначе сервер вернёт initData required
       if (!tg || !initData) {
         // Гостевой режим (не для продакшена, но чтобы не висло)
-        await auth.signInAnonymously();
-        uid = auth.currentUser.uid;
-        profile = { name: "Гость", img: "" };
-        await ensureUserInitialized();
-        subscribeMyData();
-        subscribeLeaderboard();
-        statusLine.textContent = "Готово (гость)";
+        await loginAsGuest("нет Telegram initData");
         return;
       }
 
@@ -251,14 +255,16 @@
       }
 
       if (!r.ok || !data?.token) {
-        throw new Error("BACKEND_ERROR: HTTP " + r.status + " " + JSON.stringify(data));
+        await loginAsGuest("недоступен backend");
+        return;
       }
 
       // ВАЖНО: вот тут часто падает unauthorized-domain, если домен не добавлен в Firebase Auth
       try {
         await auth.signInWithCustomToken(data.token);
       } catch (e) {
-        throw new Error("FIREBASE_AUTH_FAILED: " + (e?.code || "") + " " + (e?.message || e));
+        await loginAsGuest("ошибка Firebase custom token");
+        return;
       }
 
       uid = auth.currentUser.uid;
