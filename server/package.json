@@ -1,12 +1,13 @@
 {
-  "name": "tg-firebase-auth",
+  "name": "tg-miniapp-auth-function",
   "version": "1.0.0",
-  "main": "server.js",
+  "private": true,
+  "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "firebase-admin": "^12.5.0"
+    "firebase-admin": "^12.7.0"
   }
 }

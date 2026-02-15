@@ -2,8 +2,18 @@
   "rules": {
     "users": {
       "$uid": {
-        ".read": true,
-        ".write": "auth != null && auth.uid === $uid"
+        "publicCoins": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "profile": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "state": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        }
       }
     }
   }
