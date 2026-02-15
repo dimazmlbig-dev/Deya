@@ -1,5 +1,5 @@
 {
-  "name": "tg-miniapp-auth-function",
+  "name": "deya-ycf-backend",
   "version": "1.0.0",
   "private": true,
   "main": "index.js",
@@ -8,6 +8,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "firebase-admin": "^12.7.0"
+    "jsonwebtoken": "^9.0.2",
+    "ydb-sdk": "^5.9.0"
   }
 }
