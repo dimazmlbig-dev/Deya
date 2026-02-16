@@ -1,49 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>🚗 Artemka Driver</title>
-
+  <title>Deya Clicker</title>
+  <link rel="stylesheet" href="./style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="loading-screen">
-    <div style="width:100%">
-      <div id="loadingStatus">Запуск…</div>
-      <div class="bar-container"><div id="loadingBar"></div></div>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-panel">
+      <div id="loadingTitle" class="loading-title">Запуск игры…</div>
+      <div class="loading-subtitle" id="loadingSubtitle">Подготавливаем авторизацию</div>
+      <div class="loading-bar-wrap">
+        <div id="loadingBar" class="loading-bar"></div>
+      </div>
     </div>
   </div>
 
-  <div class="leaderboard">
-    <h4 style="font-size:11px; color:var(--gold); text-align:center; margin-bottom:6px">🏆 ТОП ГАРАЖА</h4>
-    <div id="leaderList">Загрузка…</div>
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="profile">
+        <img id="avatar" src="" alt="avatar" class="avatar" />
+        <div>
+          <div id="displayName" class="display-name">Игрок</div>
+          <div id="userId" class="user-id">—</div>
+        </div>
+      </div>
+      <button id="openHelpBtn" class="btn ghost">?</button>
+    </header>
+
+    <main class="game">
+      <section class="stats">
+        <div class="card">
+          <div class="label">Монеты</div>
+          <div id="coins" class="value">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Сила</div>
+          <div id="power" class="value">1</div>
+        </div>
+        <div class="card">
+          <div class="label">Авто/сек</div>
+          <div id="autoIncome" class="value">0</div>
+        </div>
+      </section>
+
+      <button id="tapBtn" class="tap-btn" type="button">TAP</button>
+
+      <section class="controls">
+        <button id="buyPowerBtn" class="btn primary" type="button">Улучшить силу</button>
+        <button id="buyAutoBtn" class="btn primary" type="button">Купить авто-доход</button>
+      </section>
+
+      <section class="leaderboard card">
+        <div class="leaderboard-title">Топ игроков</div>
+        <div id="leaderboardList" class="leaderboard-list">Загрузка…</div>
+      </section>
+    </main>
   </div>
 
-  <div class="game-container">
-    <div class="stats">
-      <div class="card"><div>АРТЕМКИ</div><div class="value" id="coins">0</div></div>
-      <div class="card"><div>СИЛА</div><div class="value" id="power">1</div></div>
-    </div>
-
-    <div class="status" id="statusLine">Синхронизация…</div>
-
-    <div class="game-area">
-      <img src="tap.png" id="tap-image" alt="TAP" />
-    </div>
-
-    <div class="controls">
-      <button class="btn-primary" id="upgradeBtn">Улучшить силу</button>
-      <button class="btn-secondary" id="autoBtn">Автомойка — … 🚗</button>
+  <div id="authModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Откройте игру в Telegram</h2>
+      <p>
+        Полная авторизация работает через Telegram WebApp. Вы можете открыть приложение в Telegram
+        или продолжить как гость.
+      </p>
+      <div class="modal-actions">
+        <a id="openTelegramLink" class="btn primary" target="_blank" rel="noopener">Открыть в Telegram</a>
+        <button id="guestLoginBtn" class="btn ghost" type="button">Войти как гость</button>
+      </div>
     </div>
   </div>
 
-  <div class="debugBox" id="debugBox"></div>
+  <div id="helpModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Как играть</h2>
+      <p>Нажимайте TAP, покупайте улучшения и поднимайтесь в лидерборде.</p>
+      <button id="closeHelpBtn" class="btn primary" type="button">Понятно</button>
+    </div>
+  </div>
 
-  <script src="app.js"></script>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="./app.js"></script>
 </body>
 </html>
