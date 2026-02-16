@@ -3,10 +3,11 @@
 
   const GAME_CONFIG = {
     BACKEND_BASE_URL: 'https://functions.yandexcloud.net/d4eo5bd6pflq6musmfba',
-    BOT_USERNAME: 'YOUR_BOT_USERNAME',
+    BOT_USERNAME: 'PASTE_YOUR_BOT_USERNAME_HERE', // <-- ОБЯЗАТЕЛЬНО заменить
     STARTAPP_PARAM: 'play',
     PROFILE_REFRESH_MS: 45000,
-    AUTO_TICK_MS: 1000
+    AUTO_TICK_MS: 1000,
+    REQUEST_TIMEOUT_MS: 12000
   };
 
   const state = {
@@ -52,13 +53,10 @@
     closeHelpBtn: document.getElementById('closeHelpBtn')
   };
 
-  const deepLink = `https://t.me/${encodeURIComponent(GAME_CONFIG.BOT_USERNAME)}?startapp=${encodeURIComponent(GAME_CONFIG.STARTAPP_PARAM)}`;
-  el.openTelegramLink.href = deepLink;
-
   function setLoading(progress, title, subtitle = '') {
     el.loadingBar.style.width = `${Math.max(0, Math.min(progress, 100))}%`;
     if (title) el.loadingTitle.textContent = title;
-    if (subtitle) el.loadingSubtitle.textContent = subtitle;
+    el.loadingSubtitle.textContent = subtitle || '';
   }
 
   function hideLoading() {
@@ -72,38 +70,74 @@
     el.toast.style.background = isError ? '#3b1f1f' : '#252d3b';
     el.toast.classList.remove('hidden');
     clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => el.toast.classList.add('hidden'), 2400);
+    showToast._timer = setTimeout(() => el.toast.classList.add('hidden'), 2600);
   }
 
   function setToken(token) {
     state.token = token || '';
-    if (state.token) {
-      localStorage.setItem('deya_jwt', state.token);
-    } else {
-      localStorage.removeItem('deya_jwt');
+    if (state.token) localStorage.setItem('deya_jwt', state.token);
+    else localStorage.removeItem('deya_jwt');
+  }
+
+  function assertBotUsernameConfigured() {
+    const v = (GAME_CONFIG.BOT_USERNAME || '').trim();
+    if (!v || v === 'YOUR_BOT_USERNAME' || v.includes('PASTE_YOUR_BOT_USERNAME')) {
+      throw new Error('BOT_USERNAME_not_set');
     }
+  }
+
+  function setupDeepLink() {
+    assertBotUsernameConfigured();
+    const deepLink =
+      `https://t.me/${encodeURIComponent(GAME_CONFIG.BOT_USERNAME)}?startapp=${encodeURIComponent(GAME_CONFIG.STARTAPP_PARAM)}`;
+    el.openTelegramLink.href = deepLink;
+  }
+
+  function withTimeout(promise, ms) {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), ms);
+    return {
+      promise: promise(ac.signal).finally(() => clearTimeout(t)),
+      abort: () => ac.abort()
+    };
   }
 
   async function api(path, options = {}, authRequired = true) {
     const url = `${GAME_CONFIG.BACKEND_BASE_URL}${path}`;
-    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-    if (authRequired && state.token) {
-      headers.Authorization = `Bearer ${state.token}`;
+    const method = (options.method || 'GET').toUpperCase();
+
+    const headers = Object.assign({}, options.headers || {});
+    // Не ставим Content-Type на GET без body: иначе лишний preflight и чаще ловят CORS.
+    const hasBody = options.body !== undefined && options.body !== null && method !== 'GET';
+    if (hasBody) headers['Content-Type'] = 'application/json';
+
+    if (authRequired && state.token) headers.Authorization = `Bearer ${state.token}`;
+
+    const { promise } = withTimeout(async (signal) => {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: hasBody ? JSON.stringify(options.body) : undefined,
+        signal
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload.ok === false) {
+        const msg = payload.error || `HTTP_${res.status}`;
+        throw new Error(msg);
+      }
+      return payload;
+    }, GAME_CONFIG.REQUEST_TIMEOUT_MS);
+
+    try {
+      return await promise;
+    } catch (e) {
+      // Типичная ошибка браузера при CORS/сетевой проблеме
+      if (String(e?.message || '').toLowerCase().includes('failed to fetch')) {
+        throw new Error('failed_to_fetch (CORS/URL/Function down)');
+      }
+      throw e;
     }
-
-    const response = await fetch(url, {
-      method: options.method || 'GET',
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.ok === false) {
-      const msg = payload.error || `HTTP_${response.status}`;
-      throw new Error(msg);
-    }
-
-    return payload;
   }
 
   function updateUI() {
@@ -112,6 +146,7 @@
     el.autoIncome.textContent = String(state.autoIncome);
     el.displayName.textContent = state.profile.name || 'Игрок';
     el.userId.textContent = state.userId || '—';
+
     el.avatar.src = state.profile.avatarUrl || '';
     el.avatar.style.visibility = state.profile.avatarUrl ? 'visible' : 'hidden';
 
@@ -127,7 +162,7 @@
     state.coins = Number(data.state?.coins || 0);
     state.power = Number(data.state?.power || 1);
     state.autoIncome = Number(data.state?.autoIncome || 0);
-    state.publicCoins = Number(data.publicCoins || state.coins);
+    state.publicCoins = Number(data.publicCoins ?? state.coins);
     state.profile = {
       name: data.profile?.name || 'Игрок',
       avatarUrl: data.profile?.avatarUrl || ''
@@ -136,14 +171,16 @@
   }
 
   async function loadLeaderboard() {
-    const data = await api('/leaderboard?limit=10', {}, false);
+    const data = await api('/leaderboard?limit=10', { method: 'GET' }, false);
     const rows = Array.isArray(data.items) ? data.items : [];
     if (!rows.length) {
       el.leaderboardList.textContent = 'Пока пусто';
       return;
     }
     el.leaderboardList.innerHTML = rows
-      .map((x, i) => `<div class="leader-row"><span>${i + 1}. ${escapeHtml(x.name || x.userId)}</span><strong>${Math.floor(Number(x.publicCoins || 0))}</strong></div>`)
+      .map((x, i) =>
+        `<div class="leader-row"><span>${i + 1}. ${escapeHtml(x.name || x.userId)}</span><strong>${Math.floor(Number(x.publicCoins || 0))}</strong></div>`
+      )
       .join('');
   }
 
@@ -157,9 +194,7 @@
   }
 
   async function authViaTelegram() {
-    if (!tg || !tg.initData) {
-      throw new Error('telegram_webapp_unavailable');
-    }
+    if (!tg || !tg.initData) throw new Error('telegram_webapp_unavailable');
     const data = await api('/auth', { method: 'POST', body: { initData: tg.initData } }, false);
     setToken(data.token);
   }
@@ -193,7 +228,7 @@
       try {
         await handleTap('auto');
       } catch {
-        // не спамим ошибками каждую секунду
+        // тихо
       }
     }, GAME_CONFIG.AUTO_TICK_MS);
   }
@@ -201,20 +236,13 @@
   function setupProfileRefresh() {
     clearInterval(state.profileTimer);
     state.profileTimer = setInterval(async () => {
-      try {
-        await loadMe();
-      } catch {
-        // тихий фоновый refresh
-      }
+      if (!state.token) return;
+      try { await loadMe(); } catch { /* тихо */ }
     }, GAME_CONFIG.PROFILE_REFRESH_MS);
 
     window.addEventListener('focus', async () => {
       if (!state.token) return;
-      try {
-        await loadMe();
-      } catch {
-        // ignore
-      }
+      try { await loadMe(); } catch { /* ignore */ }
     });
   }
 
@@ -233,9 +261,7 @@
     const tapHandler = async (event) => {
       event.preventDefault();
       try {
-        if (tg?.HapticFeedback?.impactOccurred) {
-          tg.HapticFeedback.impactOccurred('light');
-        }
+        tg?.HapticFeedback?.impactOccurred?.('light');
         await handleTap('tap');
       } catch (e) {
         showToast(`Tap error: ${e.message}`, true);
@@ -246,19 +272,13 @@
     el.tapBtn.addEventListener('click', tapHandler);
 
     el.buyPowerBtn.addEventListener('click', async () => {
-      try {
-        await handleBuy('power');
-      } catch (e) {
-        showToast(`Покупка силы: ${e.message}`, true);
-      }
+      try { await handleBuy('power'); }
+      catch (e) { showToast(`Покупка силы: ${e.message}`, true); }
     });
 
     el.buyAutoBtn.addEventListener('click', async () => {
-      try {
-        await handleBuy('auto');
-      } catch (e) {
-        showToast(`Покупка авто: ${e.message}`, true);
-      }
+      try { await handleBuy('auto'); }
+      catch (e) { showToast(`Покупка авто: ${e.message}`, true); }
     });
 
     el.openHelpBtn.addEventListener('click', () => el.helpModal.classList.remove('hidden'));
@@ -281,6 +301,12 @@
     mountActions();
 
     try {
+      setLoading(10, 'Подготовка…');
+
+      // Deep link нужен только для кнопки “Открыть в Telegram”
+      try { setupDeepLink(); }
+      catch { /* покажем модалку, но сообщим ошибку ниже */ }
+
       setLoading(18, 'Проверяем сессию…');
       if (state.token) {
         await postAuthBoot();
@@ -297,6 +323,11 @@
       setLoading(20, 'Требуется Telegram', 'Откройте через Telegram или войдите гостем');
       el.authModal.classList.remove('hidden');
       hideLoading();
+
+      // Явная подсказка, если BOT_USERNAME не задан
+      try { assertBotUsernameConfigured(); }
+      catch { showToast('BOT_USERNAME не задан в app.js', true); }
+
     } catch (e) {
       setToken('');
       showToast(`Ошибка инициализации: ${e.message}`, true);
