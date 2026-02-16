@@ -6,7 +6,6 @@ CREATE TABLE users (
   coins Int64,
   power Int32,
   auto_income Int32,
-  energy Int32,
   public_coins Int64,
   created_at Timestamp,
   updated_at Timestamp,
@@ -21,5 +20,5 @@ CREATE TABLE profiles (
   PRIMARY KEY (user_id)
 );
 
--- Optional secondary index for leaderboard-heavy workloads
-ALTER TABLE users ADD INDEX idx_public_coins GLOBAL ON (public_coins);
+-- Индекс под лидерборд (TOP by public_coins)
+CREATE INDEX idx_users_public_coins GLOBAL ON users (public_coins);
