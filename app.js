@@ -3,7 +3,7 @@
 
   const GAME_CONFIG = {
     BACKEND_BASE_URL: 'https://functions.yandexcloud.net/d4eo5bd6pflq6musmfba',
-    BOT_USERNAME: 'YOUR_BOT_USERNAME',
+    BOT_USERNAME: 'ArtemkaDriverbot', // Исправлено на ваш username
     STARTAPP_PARAM: 'play',
     PROFILE_REFRESH_MS: 45000,
     AUTO_TICK_MS: 1000
@@ -52,21 +52,26 @@
     closeHelpBtn: document.getElementById('closeHelpBtn')
   };
 
-  const deepLink = `https://t.me/${encodeURIComponent(GAME_CONFIG.BOT_USERNAME)}?startapp=${encodeURIComponent(GAME_CONFIG.STARTAPP_PARAM)}`;
-  el.openTelegramLink.href = deepLink;
+  // Формируем правильную ссылку для открытия в Telegram
+  const deepLink = `https://t.me/${GAME_CONFIG.BOT_USERNAME}/${GAME_CONFIG.STARTAPP_PARAM}`;
+  if (el.openTelegramLink) {
+    el.openTelegramLink.href = deepLink;
+  }
 
   function setLoading(progress, title, subtitle = '') {
-    el.loadingBar.style.width = `${Math.max(0, Math.min(progress, 100))}%`;
-    if (title) el.loadingTitle.textContent = title;
-    if (subtitle) el.loadingSubtitle.textContent = subtitle;
+    if (el.loadingBar) el.loadingBar.style.width = `${Math.max(0, Math.min(progress, 100))}%`;
+    if (title && el.loadingTitle) el.loadingTitle.textContent = title;
+    if (subtitle && el.loadingSubtitle) el.loadingSubtitle.textContent = subtitle;
   }
 
   function hideLoading() {
+    if (!el.loadingScreen) return;
     el.loadingScreen.style.opacity = '0';
     setTimeout(() => el.loadingScreen.classList.add('hidden'), 250);
   }
 
   function showToast(message, isError = false) {
+    if (!el.toast) return;
     el.toast.textContent = message;
     el.toast.style.borderColor = isError ? '#8a2f2f' : '#3d4860';
     el.toast.style.background = isError ? '#3b1f1f' : '#252d3b';
@@ -91,60 +96,82 @@
       headers.Authorization = `Bearer ${state.token}`;
     }
 
-    const response = await fetch(url, {
-      method: options.method || 'GET',
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined
-    });
+    try {
+      const response = await fetch(url, {
+        method: options.method || 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
 
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.ok === false) {
-      const msg = payload.error || `HTTP_${response.status}`;
-      throw new Error(msg);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok === false) {
+        const msg = payload.error || `HTTP_${response.status}`;
+        throw new Error(msg);
+      }
+
+      return payload;
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
     }
-
-    return payload;
   }
 
   function updateUI() {
-    el.coins.textContent = String(Math.floor(state.coins));
-    el.power.textContent = String(state.power);
-    el.autoIncome.textContent = String(state.autoIncome);
-    el.displayName.textContent = state.profile.name || 'Игрок';
-    el.userId.textContent = state.userId || '—';
-    el.avatar.src = state.profile.avatarUrl || '';
-    el.avatar.style.visibility = state.profile.avatarUrl ? 'visible' : 'hidden';
+    if (el.coins) el.coins.textContent = String(Math.floor(state.coins));
+    if (el.power) el.power.textContent = String(state.power);
+    if (el.autoIncome) el.autoIncome.textContent = String(state.autoIncome);
+    if (el.displayName) el.displayName.textContent = state.profile.name || 'Игрок';
+    if (el.userId) el.userId.textContent = state.userId || '—';
+    if (el.avatar) {
+      el.avatar.src = state.profile.avatarUrl || '';
+      el.avatar.style.visibility = state.profile.avatarUrl ? 'visible' : 'hidden';
+    }
 
     const powerCost = 20 * state.power;
     const autoCost = 60 * (state.autoIncome + 1);
-    el.buyPowerBtn.textContent = `+Сила (${powerCost})`;
-    el.buyAutoBtn.textContent = `+Авто (${autoCost})`;
+    if (el.buyPowerBtn) el.buyPowerBtn.textContent = `+Сила (${powerCost})`;
+    if (el.buyAutoBtn) el.buyAutoBtn.textContent = `+Авто (${autoCost})`;
   }
 
   async function loadMe() {
-    const data = await api('/me');
-    state.userId = data.userId;
-    state.coins = Number(data.state?.coins || 0);
-    state.power = Number(data.state?.power || 1);
-    state.autoIncome = Number(data.state?.autoIncome || 0);
-    state.publicCoins = Number(data.publicCoins || state.coins);
-    state.profile = {
-      name: data.profile?.name || 'Игрок',
-      avatarUrl: data.profile?.avatarUrl || ''
-    };
-    updateUI();
+    try {
+      const data = await api('/me');
+      state.userId = data.userId;
+      state.coins = Number(data.state?.coins || 0);
+      state.power = Number(data.state?.power || 1);
+      state.autoIncome = Number(data.state?.autoIncome || 0);
+      state.publicCoins = Number(data.publicCoins || state.coins);
+      state.profile = {
+        name: data.profile?.name || 'Игрок',
+        avatarUrl: data.profile?.avatarUrl || ''
+      };
+      updateUI();
+    } catch (error) {
+      console.error('Load me error:', error);
+      throw error;
+    }
   }
 
   async function loadLeaderboard() {
-    const data = await api('/leaderboard?limit=10', {}, false);
-    const rows = Array.isArray(data.items) ? data.items : [];
-    if (!rows.length) {
-      el.leaderboardList.textContent = 'Пока пусто';
-      return;
+    try {
+      const data = await api('/leaderboard?limit=10', {}, false);
+      const rows = Array.isArray(data.items) ? data.items : [];
+      if (!el.leaderboardList) return;
+      
+      if (!rows.length) {
+        el.leaderboardList.textContent = 'Пока пусто';
+        return;
+      }
+      
+      el.leaderboardList.innerHTML = rows
+        .map((x, i) => `<div class="leader-row"><span>${i + 1}. ${escapeHtml(x.name || x.userId)}</span><strong>${Math.floor(Number(x.publicCoins || 0))}</strong></div>`)
+        .join('');
+    } catch (error) {
+      console.error('Leaderboard error:', error);
+      if (el.leaderboardList) {
+        el.leaderboardList.textContent = 'Ошибка загрузки';
+      }
     }
-    el.leaderboardList.innerHTML = rows
-      .map((x, i) => `<div class="leader-row"><span>${i + 1}. ${escapeHtml(x.name || x.userId)}</span><strong>${Math.floor(Number(x.publicCoins || 0))}</strong></div>`)
-      .join('');
   }
 
   function escapeHtml(v) {
@@ -158,32 +185,45 @@
 
   async function authViaTelegram() {
     if (!tg || !tg.initData) {
-      throw new Error('telegram_webapp_unavailable');
+      throw new Error('Telegram WebApp не доступен. Откройте игру через Telegram.');
     }
+    
+    setLoading(40, 'Авторизация через Telegram...', 'Проверяем данные');
     const data = await api('/auth', { method: 'POST', body: { initData: tg.initData } }, false);
     setToken(data.token);
   }
 
   async function authGuest() {
+    setLoading(40, 'Гостевой вход...', 'Создаём временную сессию');
     const data = await api('/auth/guest', { method: 'POST', body: {} }, false);
     setToken(data.token);
   }
 
   async function handleTap(source = 'tap') {
-    const data = await api('/tap', { method: 'POST', body: { source } });
-    state.coins = Number(data.state.coins);
-    state.publicCoins = Number(data.publicCoins);
-    updateUI();
+    try {
+      const data = await api('/tap', { method: 'POST', body: { source } });
+      state.coins = Number(data.state.coins);
+      state.publicCoins = Number(data.publicCoins);
+      updateUI();
+    } catch (error) {
+      console.error('Tap error:', error);
+      throw error;
+    }
   }
 
   async function handleBuy(type) {
-    const data = await api('/buy', { method: 'POST', body: { type } });
-    state.coins = Number(data.state.coins);
-    state.power = Number(data.state.power);
-    state.autoIncome = Number(data.state.autoIncome);
-    state.publicCoins = Number(data.publicCoins);
-    updateUI();
-    showToast('Покупка успешна');
+    try {
+      const data = await api('/buy', { method: 'POST', body: { type } });
+      state.coins = Number(data.state.coins);
+      state.power = Number(data.state.power);
+      state.autoIncome = Number(data.state.autoIncome);
+      state.publicCoins = Number(data.publicCoins);
+      updateUI();
+      showToast('Покупка успешна');
+    } catch (error) {
+      console.error('Buy error:', error);
+      throw error;
+    }
   }
 
   function setupAutoIncome() {
@@ -192,8 +232,8 @@
       if (!state.token || state.autoIncome <= 0) return;
       try {
         await handleTap('auto');
-      } catch {
-        // не спамим ошибками каждую секунду
+      } catch (e) {
+        // тихо игнорируем ошибки авто-кликов
       }
     }, GAME_CONFIG.AUTO_TICK_MS);
   }
@@ -203,8 +243,9 @@
     state.profileTimer = setInterval(async () => {
       try {
         await loadMe();
-      } catch {
-        // тихий фоновый refresh
+        await loadLeaderboard();
+      } catch (e) {
+        // тихо игнорируем ошибки фонового обновления
       }
     }, GAME_CONFIG.PROFILE_REFRESH_MS);
 
@@ -212,98 +253,153 @@
       if (!state.token) return;
       try {
         await loadMe();
-      } catch {
-        // ignore
+        await loadLeaderboard();
+      } catch (e) {
+        // игнорируем
       }
     });
   }
 
   function mountActions() {
-    el.guestLoginBtn.addEventListener('click', async () => {
-      try {
-        setLoading(35, 'Гостевой вход…', 'Создаём временную сессию');
-        await authGuest();
-        el.authModal.classList.add('hidden');
-        await postAuthBoot();
-      } catch (e) {
-        showToast(`Ошибка guest login: ${e.message}`, true);
-      }
-    });
+    if (el.guestLoginBtn) {
+      el.guestLoginBtn.addEventListener('click', async () => {
+        try {
+          el.authModal.classList.add('hidden');
+          await authGuest();
+          await postAuthBoot();
+        } catch (e) {
+          showToast(`Ошибка: ${e.message}`, true);
+          el.authModal.classList.remove('hidden');
+        }
+      });
+    }
 
     const tapHandler = async (event) => {
       event.preventDefault();
+      if (!state.token) {
+        showToast('Сначала войдите в игру', true);
+        return;
+      }
       try {
         if (tg?.HapticFeedback?.impactOccurred) {
           tg.HapticFeedback.impactOccurred('light');
         }
         await handleTap('tap');
       } catch (e) {
-        showToast(`Tap error: ${e.message}`, true);
+        showToast(`Ошибка: ${e.message}`, true);
       }
     };
 
-    el.tapBtn.addEventListener('touchstart', tapHandler, { passive: false });
-    el.tapBtn.addEventListener('click', tapHandler);
+    if (el.tapBtn) {
+      el.tapBtn.addEventListener('touchstart', tapHandler, { passive: false });
+      el.tapBtn.addEventListener('click', tapHandler);
+    }
 
-    el.buyPowerBtn.addEventListener('click', async () => {
-      try {
-        await handleBuy('power');
-      } catch (e) {
-        showToast(`Покупка силы: ${e.message}`, true);
-      }
-    });
+    if (el.buyPowerBtn) {
+      el.buyPowerBtn.addEventListener('click', async () => {
+        try {
+          await handleBuy('power');
+        } catch (e) {
+          showToast(`Ошибка: ${e.message}`, true);
+        }
+      });
+    }
 
-    el.buyAutoBtn.addEventListener('click', async () => {
-      try {
-        await handleBuy('auto');
-      } catch (e) {
-        showToast(`Покупка авто: ${e.message}`, true);
-      }
-    });
+    if (el.buyAutoBtn) {
+      el.buyAutoBtn.addEventListener('click', async () => {
+        try {
+          await handleBuy('auto');
+        } catch (e) {
+          showToast(`Ошибка: ${e.message}`, true);
+        }
+      });
+    }
 
-    el.openHelpBtn.addEventListener('click', () => el.helpModal.classList.remove('hidden'));
-    el.closeHelpBtn.addEventListener('click', () => el.helpModal.classList.add('hidden'));
+    if (el.openHelpBtn && el.helpModal && el.closeHelpBtn) {
+      el.openHelpBtn.addEventListener('click', () => el.helpModal.classList.remove('hidden'));
+      el.closeHelpBtn.addEventListener('click', () => el.helpModal.classList.add('hidden'));
+    }
   }
 
   async function postAuthBoot() {
-    setLoading(60, 'Загрузка профиля…');
-    await loadMe();
-    setLoading(78, 'Загрузка лидерборда…');
-    await loadLeaderboard();
-    setLoading(100, 'Готово');
-    el.app.classList.remove('hidden');
-    hideLoading();
-    setupAutoIncome();
-    setupProfileRefresh();
+    try {
+      setLoading(60, 'Загрузка профиля…');
+      await loadMe();
+      
+      setLoading(78, 'Загрузка лидерборда…');
+      await loadLeaderboard();
+      
+      setLoading(100, 'Готово!');
+      
+      if (el.app) el.app.classList.remove('hidden');
+      if (el.authModal) el.authModal.classList.add('hidden');
+      
+      hideLoading();
+      setupAutoIncome();
+      setupProfileRefresh();
+    } catch (error) {
+      console.error('Post auth error:', error);
+      showToast('Ошибка загрузки игры', true);
+    }
   }
 
   async function init() {
     mountActions();
 
     try {
-      setLoading(18, 'Проверяем сессию…');
+      setLoading(10, 'Инициализация...');
+      
+      // Проверяем, открыто ли приложение в Telegram
+      if (tg) {
+        console.log('Telegram WebApp доступен');
+        setLoading(20, 'Telegram WebApp подключен');
+      }
+
+      // Проверяем сохраненный токен
       if (state.token) {
-        await postAuthBoot();
-        return;
+        setLoading(30, 'Восстанавливаем сессию...');
+        try {
+          await postAuthBoot();
+          return;
+        } catch (e) {
+          console.log('Токен устарел, требуется новая авторизация');
+          setToken('');
+        }
       }
 
+      // Пробуем авторизацию через Telegram
       if (tg?.initData) {
-        setLoading(34, 'Telegram авторизация…', 'Проверяем initData');
-        await authViaTelegram();
-        await postAuthBoot();
-        return;
+        try {
+          await authViaTelegram();
+          await postAuthBoot();
+          return;
+        } catch (e) {
+          console.error('Telegram auth failed:', e);
+          showToast('Ошибка авторизации через Telegram', true);
+        }
       }
 
-      setLoading(20, 'Требуется Telegram', 'Откройте через Telegram или войдите гостем');
-      el.authModal.classList.remove('hidden');
+      // Показываем модалку выбора способа входа
+      setLoading(20, 'Выберите способ входа');
+      if (el.authModal) {
+        el.authModal.classList.remove('hidden');
+      }
       hideLoading();
+
     } catch (e) {
-      setToken('');
-      showToast(`Ошибка инициализации: ${e.message}`, true);
-      el.authModal.classList.remove('hidden');
+      console.error('Init error:', e);
+      showToast(`Ошибка: ${e.message}`, true);
+      if (el.authModal) {
+        el.authModal.classList.remove('hidden');
+      }
       hideLoading();
     }
   }
 
-  init();
+  // Запускаем инициализацию после полной загрузки DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
