@@ -88,12 +88,21 @@
     }
   }
 
-  async function api(path, options = {}, authRequired = true) {
-    const url = `${GAME_CONFIG.BACKEND_BASE_URL}${path}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
+  async function authGuest() {
+  setLoading(40, 'Гостевой вход...');
+  try {
+    const data = await api('/auth/guest', { method: 'POST', body: {} }, false);
+    if (data.token) {
+      setToken(data.token);
+    } else {
+      throw new Error('Сервер не вернул токен');
+    }
+  } catch (e) {
+    console.error('Детальная ошибка гостевого входа:', e);
+    showToast(`Ошибка: ${e.message}`, true);
+    throw e; // пробрасываем дальше
+  }
+}
     
     if (authRequired && state.token) {
       headers['Authorization'] = `Bearer ${state.token}`;
