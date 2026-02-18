@@ -1,162 +1,92 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Deya Clicker</title>
-  <link rel="stylesheet" href="./style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Артёмка Driver</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+  <!-- Загрузка -->
   <div id="loadingScreen" class="loading-screen">
-    <div class="loading-panel">
-      <div id="loadingTitle" class="loading-title">Запуск игры…</div>
-      <div class="loading-subtitle" id="loadingSubtitle">Подготавливаем авторизацию</div>
-      <div class="loading-bar-wrap">
-        <div id="loadingBar" class="loading-bar"></div>
-      </div>
+    <img src="load.png" alt="load" class="loading-icon">
+    <div class="loading-bar-container">
+      <div id="loadingBar" class="loading-bar"></div>
     </div>
+    <div id="loadingText" class="loading-text">Загрузка...</div>
   </div>
 
+  <!-- Основное приложение -->
   <div id="app" class="app hidden">
-    <header class="topbar">
+    <header class="header">
       <div class="profile">
-        <img id="avatar" src="" alt="avatar" class="avatar" />
-        <div>
-          <div id="displayName" class="display-name">Игрок</div>
+        <img id="avatar" src="" alt="avatar" class="avatar hidden">
+        <div class="profile-info">
+          <div id="displayName" class="name">Игрок</div>
           <div id="userId" class="user-id">—</div>
         </div>
       </div>
-      <button id="openHelpBtn" class="btn ghost">?</button>
+      <button id="helpBtn" class="help-btn">?</button>
     </header>
 
     <main class="game">
-      <section class="stats">
-        <div class="card">
-          <div class="label">Монеты</div>
-          <div id="coins" class="value">0</div>
-        </div>
-        <div class="card">
-          <div class="label">Сила</div>
-          <div id="power" class="value">1</div>
-        </div>
-        <div class="card">
-          <div class="label">Авто/сек</div>
-          <div id="autoIncome" class="value">0</div>
-        </div>
-        <div class="card">
-          <div class="label">NFT Питомцы</div>
-          <div id="petPower" class="value">0</div>
-        </div>
-        <div class="card">
-          <div class="label">Биржа</div>
-          <div id="marketValue" class="value">0</div>
-        </div>
-      </section>
+      <div class="balance">
+        <span class="balance-label">Артёмки</span>
+        <span id="coins" class="balance-value">0</span>
+      </div>
 
-      <button id="tapBtn" class="tap-btn" type="button">TAP</button>
+      <div class="tap-area">
+        <img id="tapImage" src="tap.png" alt="tap" class="tap-image">
+      </div>
 
-      <section class="controls">
-        <button id="buyPowerBtn" class="btn primary" type="button">Улучшить силу</button>
-        <button id="buyAutoBtn" class="btn primary" type="button">Купить авто-доход</button>
-        <button id="buyPetBtn" class="btn primary" type="button">Купить NFT Питомца</button>
-        <button id="marketBtn" class="btn primary" type="button">Открыть биржу</button>
-        <button id="tradingBtn" class="btn primary" type="button">Трейдинг</button>
-      </section>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Сила клика</div>
+          <div id="power" class="stat-value">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Авто/сек</div>
+          <div id="autoIncome" class="stat-value">0</div>
+        </div>
+      </div>
 
-      <section class="leaderboard card">
-        <div class="leaderboard-title">Топ игроков</div>
-        <div id="leaderboardList" class="leaderboard-list">Загрузка…</div>
-      </section>
+      <div class="shop">
+        <button id="buyPowerBtn" class="shop-btn">+ Сила (20)</button>
+        <button id="buyAutoBtn" class="shop-btn">+ Авто (60)</button>
+      </div>
+
+      <div class="leaderboard">
+        <h3>Топ игроков</h3>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+      </div>
     </main>
   </div>
 
+  <!-- Модалка авторизации -->
   <div id="authModal" class="modal hidden">
-    <div class="modal-card">
+    <div class="modal-content">
       <h2>Откройте игру в Telegram</h2>
-      <p>
-        Полная авторизация работает через Telegram WebApp. Вы можете открыть приложение в Telegram
-        или продолжить как гость.
-      </p>
+      <p>Полная авторизация работает через Telegram WebApp. Вы можете открыть приложение в Telegram или продолжить как гость.</p>
       <div class="modal-actions">
-        <a id="openTelegramLink" class="btn primary" target="_blank" rel="noopener">Открыть в Telegram</a>
-        <button id="guestLoginBtn" class="btn ghost" type="button">Войти как гость</button>
+        <a id="telegramLink" class="btn primary" target="_blank">Открыть в Telegram</a>
+        <button id="guestBtn" class="btn secondary">Войти как гость</button>
       </div>
     </div>
   </div>
 
+  <!-- Модалка помощи -->
   <div id="helpModal" class="modal hidden">
-    <div class="modal-card">
+    <div class="modal-content">
       <h2>Как играть</h2>
-      <p>Нажимайте TAP, покупайте улучшения и поднимайтесь в лидерборде.</p>
-      <button id="closeHelpBtn" class="btn primary" type="button">Понятно</button>
+      <p>Нажимайте на Артёмку, зарабатывайте монеты и покупайте улучшения. Поднимайтесь в топе!</p>
+      <button id="closeHelpBtn" class="btn primary">Понятно</button>
     </div>
   </div>
 
+  <!-- Тосты -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- AI Тренер -->
-  <div id="aiTrainer" class="ai-trainer hidden">
-    <div class="ai-header">
-      <img src="./assets/ai-icon.png" alt="AI" class="ai-icon">
-      <span>AI Тренер</span>
-      <button id="closeAiBtn">×</button>
-    </div>
-    <div class="ai-content">
-      <p id="aiMessage">Добро пожаловать! Я помогу тебе стать лучшим игроком.</p>
-      <div id="aiRecommendations"></div>
-    </div>
-  </div>
-
-  <!-- Биржа -->
-  <div id="marketModal" class="modal hidden">
-    <div class="modal-card">
-      <h2>Децентрализованная биржа</h2>
-      <div id="marketContent">
-        <div class="market-tabs">
-          <button class="tab-btn active" data-tab="market">Рынок</button>
-          <button class="tab-btn" data-tab="orders">Мои ордера</button>
-          <button class="tab-btn" data-tab="trade">Трейдинг</button>
-        </div>
-        <div id="marketTab" class="market-tab active">
-          <div id="marketList"></div>
-        </div>
-        <div id="ordersTab" class="market-tab">
-          <div id="ordersList"></div>
-        </div>
-        <div id="tradeTab" class="market-tab">
-          <div class="trading-view">
-            <div id="priceChart"></div>
-            <div class="trading-controls">
-              <input type="number" id="tradeAmount" placeholder="Сумма">
-              <div class="price-actions">
-                <button id="buyBtnMarket" class="btn success">Купить</button>
-                <button id="sellBtnMarket" class="btn danger">Продать</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <button id="closeMarketBtn" class="btn ghost">Закрыть</button>
-    </div>
-  </div>
-
-  <!-- NFT Питомцы -->
-  <div id="petsModal" class="modal hidden">
-    <div class="modal-card">
-      <h2>NFT Питомцы</h2>
-      <div id="petsContent">
-        <div class="pets-grid" id="petsGrid"></div>
-        <div class="pet-info" id="petInfo">
-          <h3>Выберите питомца</h3>
-          <p>Питомцы автоматически кликают за вас и могут эволюционировать!</p>
-        </div>
-      </div>
-      <button id="closePetsBtn" class="btn ghost">Закрыть</button>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="./app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
