@@ -1,91 +1,124 @@
 const tg = window.Telegram.WebApp;
-tg.expand(); // Развернуть на весь экран
 
-let coins = 0;
-let power = 1;
-let autoIncome = 0;
-let powerCost = 20;
-let autoCost = 60;
+// Состояние игры (загрузка из памяти или дефолт)
+let state = JSON.parse(localStorage.getItem('artemka_save')) || {
+    coins: 0,
+    power: 1,
+    autoIncome: 0,
+    powerCost: 20,
+    autoCost: 60
+};
 
 // Элементы
-const coinDisplay = document.getElementById('coins');
-const tapImage = document.getElementById('tapImage');
-const powerBtn = document.getElementById('buyPowerBtn');
-const autoBtn = document.getElementById('buyAutoBtn');
+const el = {
+    coins: document.getElementById('coins'),
+    power: document.getElementById('power'),
+    autoIncome: document.getElementById('autoIncome'),
+    powerCost: document.getElementById('powerCostLabel'),
+    autoCost: document.getElementById('autoCostLabel'),
+    tapImage: document.getElementById('tapImage'),
+    loadingBar: document.getElementById('loadingBar'),
+    app: document.getElementById('app'),
+    loadingScreen: document.getElementById('loadingScreen')
+};
 
-// Инициализация данных из Telegram
-if (tg.initDataUnsafe.user) {
-    document.getElementById('displayName').innerText = tg.initDataUnsafe.user.first_name;
-    document.getElementById('userId').innerText = `ID: ${tg.initDataUnsafe.user.id}`;
-    if (tg.initDataUnsafe.user.photo_url) {
-        const av = document.getElementById('avatar');
-        av.src = tg.initDataUnsafe.user.photo_url;
-        av.classList.remove('hidden');
+// Инициализация
+function init() {
+    tg.expand();
+    tg.ready();
+    
+    // Данные юзера Telegram
+    if (tg.initDataUnsafe.user) {
+        document.getElementById('displayName').innerText = tg.initDataUnsafe.user.first_name;
+        document.getElementById('userId').innerText = `ID: ${tg.initDataUnsafe.user.id}`;
+        if (tg.initDataUnsafe.user.photo_url) {
+            const av = document.getElementById('avatar');
+            av.src = tg.initDataUnsafe.user.photo_url;
+            av.classList.remove('hidden');
+            document.getElementById('avatarPlaceholder').classList.add('hidden');
+        }
     }
-}
 
-// Имитация загрузки
-let progress = 0;
-const interval = setInterval(() => {
-    progress += 10;
-    document.getElementById('loadingBar').style.width = progress + '%';
-    if (progress >= 100) {
-        clearInterval(interval);
-        document.getElementById('loadingScreen').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-    }
-}, 150);
+    // Симуляция загрузки
+    let p = 0;
+    const loadInt = setInterval(() => {
+        p += Math.random() * 20;
+        el.loadingBar.style.width = `${Math.min(p, 100)}%`;
+        if (p >= 100) {
+            clearInterval(loadInt);
+            el.loadingScreen.classList.add('hidden');
+            el.app.classList.remove('hidden');
+        }
+    }, 100);
 
-// Клик по Артёмке
-tapImage.addEventListener('click', (e) => {
-    coins += power;
     updateUI();
-    spawnText(e.clientX, e.clientY, `+${power}`);
-});
+}
 
-// Улучшение силы клика
-powerBtn.addEventListener('click', () => {
-    if (coins >= powerCost) {
-        coins -= powerCost;
-        power += 1;
-        powerCost = Math.floor(powerCost * 1.5);
-        updateUI();
-    }
-});
-
-// Покупка авто-дохода
-autoBtn.addEventListener('click', () => {
-    if (coins >= autoCost) {
-        coins -= autoCost;
-        autoIncome += 1;
-        autoCost = Math.floor(autoCost * 1.6);
-        updateUI();
-    }
-});
-
-// Пассивный доход каждую секунду
-setInterval(() => {
-    if (autoIncome > 0) {
-        coins += autoIncome;
-        updateUI();
-    }
-}, 1000);
-
+// Обновление интерфейса
 function updateUI() {
-    coinDisplay.innerText = Math.floor(coins);
-    powerBtn.innerText = `+ Сила (${powerCost})`;
-    autoBtn.innerText = `+ Авто (${autoCost})`;
-    document.getElementById('power').innerText = power;
-    document.getElementById('autoIncome').innerText = autoIncome;
+    el.coins.innerText = Math.floor(state.coins).toLocaleString();
+    el.power.innerText = state.power;
+    el.autoIncome.innerText = state.autoIncome;
+    el.powerCost.innerText = state.powerCost;
+    el.autoCost.innerText = state.autoCost;
+    
+    // Сохранение в локальное хранилище
+    localStorage.setItem('artemka_save', JSON.stringify(state));
 }
 
-// Эффект вылетающих цифр
-function spawnText(x, y, text) {
-    const el = document.createElement('div');
-    el.innerText = text;
-    el.className = 'floating-text';
-    el.style.left = `${x}px`;
-    el.style.top = `${y}px`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 800);
+// Логика клика
+el.tapImage.addEventListener('click', (e) => {
+    state.coins += state.power;
+    
+    // Вибрация Telegram
+    tg.HapticFeedback.impactOccurred('medium');
+    
+    // Текст клика
+    createClickEffect(e.clientX, e.clientY, `+${state.power}`);
+    updateUI();
+});
+
+function createClickEffect(x, y, text) {
+    const div = document.createElement('div');
+    div.className = 'floating-text';
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    div.innerText = text;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 700);
 }
+
+// Улучшения
+document.getElementById('buyPowerBtn').addEventListener('click', () => {
+    if (state.coins >= state.powerCost) {
+        state.coins -= state.powerCost;
+        state.power += 1;
+        state.powerCost = Math.floor(state.powerCost * 1.6);
+        tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+});
+
+document.getElementById('buyAutoBtn').addEventListener('click', () => {
+    if (state.coins >= state.autoCost) {
+        state.coins -= state.autoCost;
+        state.autoIncome += 1;
+        state.autoCost = Math.floor(state.autoCost * 1.8);
+        tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
+    } else {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+});
+
+// Пассивный доход
+setInterval(() => {
+    if (state.autoIncome > 0) {
+        state.coins += state.autoIncome / 10; // Начисление каждые 100мс для плавности
+        updateUI();
+    }
+}, 100);
+
+init();
