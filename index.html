@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Артёмка Driver Premium</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loader-content">
+      <img src="load.png" alt="load" class="loading-icon">
+      <div class="loading-bar-container">
+        <div id="loadingBar" class="loading-bar"></div>
+      </div>
+      <div id="loadingText" class="loading-text">Инициализация систем...</div>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <header class="header glass-panel">
+      <div class="profile">
+        <div class="avatar-container">
+            <img id="avatar" src="" alt="avatar" class="avatar hidden">
+            <div id="avatarPlaceholder" class="avatar-placeholder"></div>
+        </div>
+        <div class="profile-info">
+          <div id="displayName" class="name">Developer</div>
+          <div id="userId" class="user-id">ID: —</div>
+        </div>
+      </div>
+      <button id="helpBtn" class="help-btn glass-panel">?</button>
+    </header>
+
+    <main class="game-content">
+      <div class="balance-container">
+        <span class="balance-label">БАЛАНС АРТЁМОК</span>
+        <div id="coins" class="balance-value">0</div>
+      </div>
+
+      <div class="tap-area">
+        <div class="tap-glow"></div>
+        <img id="tapImage" src="tap.png" alt="tap" class="tap-image">
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card glass-panel">
+          <div class="stat-label">Сила клика</div>
+          <div id="power" class="stat-value">1</div>
+        </div>
+        <div class="stat-card glass-panel">
+          <div class="stat-label">Авто/сек</div>
+          <div id="autoIncome" class="stat-value">0</div>
+        </div>
+      </div>
+
+      <div class="shop-container">
+        <button id="buyPowerBtn" class="shop-btn glass-panel">
+            <span class="btn-text">Улучшить клик</span>
+            <span id="powerCostLabel" class="btn-price">20</span>
+        </button>
+        <button id="buyAutoBtn" class="shop-btn glass-panel">
+            <span class="btn-text">Авто-майнинг</span>
+            <span id="autoCostLabel" class="btn-price">60</span>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
